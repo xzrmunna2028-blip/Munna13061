@@ -1,0 +1,972 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.5
+ */
+
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Send, 
+  Smile, 
+  X, 
+  Users, 
+  MessageSquare,
+  Sparkles,
+  Zap,
+  Pin,
+  CheckCircle,
+  Ban,
+  VolumeX,
+  Volume2,
+  Trash2,
+  Bookmark,
+  Share2,
+  Activity
+} from 'lucide-react';
+
+interface ChatMessage {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+  flag: string;
+  text: string;
+  time: string;
+  isMe?: boolean;
+  isAdmin?: boolean;
+}
+
+interface LiveChatProps {
+  channelGroup: string;
+  currentUser: { 
+    name: string; 
+    username: string; 
+    phone?: string; 
+    avatar?: string; 
+    flag?: string; 
+  } | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const PREMIUM_REACTIONS = [
+  { tag: "[PREMIUM_FIRE]", label: "Fire Ultra", emoji: "🔥", badge: "ULTRA FIRE", style: "from-orange-500 to-red-650 shadow-md shadow-orange-500/20 text-white" },
+  { tag: "[BANGLA_TIGER]", label: "Bangla Tiger", emoji: "🐅", badge: "TIGER PRIDE", style: "bg-gradient-to-r from-emerald-600 to-green-700 shadow-md shadow-emerald-500/20 text-white" },
+  { tag: "[BIG_SIXER]", label: "Golden Sixer", emoji: "🏏", badge: "BIG SIXER", style: "bg-gradient-to-r from-sky-500 to-blue-650 shadow-md shadow-blue-500/20 text-white" },
+  { tag: "[GOAL_STRIKE]", label: "Extreme Goal", emoji: "⚽", badge: "GOALLL!", style: "bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-md shadow-fuchsia-500/20 text-white" },
+  { tag: "[ROYAL_CROWN]", label: "Royal Crown", emoji: "👑", badge: "VIP ROYAL", style: "bg-gradient-to-r from-amber-400 to-yellow-650 shadow-md shadow-amber-500/20 text-slate-950 font-black" },
+  { tag: "[MEGA_LOVE]", label: "Mega Love", emoji: "💖", badge: "LOVE IT", style: "bg-gradient-to-r from-pink-500 to-rose-600 shadow-md shadow-pink-500/20 text-white" },
+  { tag: "[SPEED_ZAP]", label: "Speed Ultra", emoji: "⚡", badge: "FAST CONNECT", style: "bg-gradient-to-r from-amber-400 to-orange-500 shadow-md shadow-orange-500/20 text-white" },
+  { tag: "[CHAMP_CUP]", label: "Champion Cup", emoji: "🏆", badge: "CHAMPION", style: "bg-gradient-to-r from-yellow-405 to-amber-600 shadow-md shadow-yellow-500/20 text-white" }
+];
+
+export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }: LiveChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [showEmojiTray, setShowEmojiTray] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(1);
+
+  // Load real-time presence audience count on mount
+  useEffect(() => {
+    const fetchAudienceCount = () => {
+      fetch('/api/presence')
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data.count === 'number') {
+            setOnlineCount(data.count || 1);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchAudienceCount();
+    const interval = setInterval(fetchAudienceCount, 3000); // Polling every 3s
+    return () => clearInterval(interval);
+  }, []);
+
+  // Poll state (Local Storage based real time synchronization)
+  const [activePoll, setActivePoll] = useState<{
+    question: string;
+    options: { text: string; votes: number }[];
+    votedIndex?: number;
+  } | null>(null);
+
+  // Pinned comment state
+  const [pinnedMsg, setPinnedMsg] = useState<{
+    text: string;
+    author: string;
+    avatar?: string;
+  } | null>(null);
+
+  // Selected message for Admin moderation popup
+  const [moderatingMessage, setModeratingMessage] = useState<ChatMessage | null>(null);
+
+  // Selected message for user reporting popup
+  const [reportingMessage, setReportingMessage] = useState<ChatMessage | null>(null);
+  const [selectedReportReason, setSelectedReportReason] = useState('হ্যারেজমেন্ট / কটূক্তি করা');
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Admin Verification state check
+  const isCurrentAdmin = currentUser?.username === 'bongomember';
+
+  // Load real-time messages from shared store & coordinate online spectator increments
+  useEffect(() => {
+    const loadRealMessages = () => {
+      try {
+        const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+        const db = dbRaw ? JSON.parse(dbRaw) : [];
+        setMessages(db);
+      } catch (e) {
+        setMessages([]);
+      }
+    };
+
+    loadRealMessages();
+
+    // Trigger open chat audience count once on mount / open
+    if (isOpen) {
+      const counts = Number(localStorage.getItem('bongo_chat_open_counts') || '0');
+      localStorage.setItem('bongo_chat_open_counts', String(counts + 1));
+    }
+
+    // Standard listener for local storage changes across tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bongo_live_chat_messages_db') {
+        loadRealMessages();
+      }
+    };
+    
+    // Polling backup to keep updates instantaneous
+    const pollTimer = setInterval(() => {
+      loadRealMessages();
+    }, 1500);
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      clearInterval(pollTimer);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isOpen, channelGroup]);
+
+  // Handle local state loading
+  useEffect(() => {
+    // Load Pinned Message
+    try {
+      const savedPin = localStorage.getItem('chat_pinned_comment');
+      if (savedPin) {
+        setPinnedMsg(JSON.parse(savedPin));
+      } else {
+        setPinnedMsg(null);
+      }
+    } catch {
+      // Fallback
+    }
+
+    // Load active Poll
+    try {
+      const savedPoll = localStorage.getItem('chat_active_poll');
+      if (savedPoll) {
+        const parsed = JSON.parse(savedPoll);
+        // Verify user voting persistence inside this local state
+        const votedIdx = localStorage.getItem(`chat_poll_vote_${parsed.question}`);
+        setActivePoll({
+          ...parsed,
+          votedIndex: votedIdx !== null ? parseInt(votedIdx, 10) : undefined
+        });
+      } else {
+        setActivePoll(null);
+      }
+    } catch {
+      // Fallback
+    }
+  }, [channelGroup]);
+
+  // Listen to any administrative changes on muting / pinning
+  useEffect(() => {
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (e.key === 'chat_pinned_comment') {
+        setPinnedMsg(e.newValue ? JSON.parse(e.newValue) : null);
+      }
+      if (e.key === 'chat_active_poll') {
+        if (e.newValue) {
+          const parsed = JSON.parse(e.newValue);
+          const votedIdx = localStorage.getItem(`chat_poll_vote_${parsed.question}`);
+          setActivePoll({
+            ...parsed,
+            votedIndex: votedIdx !== null ? parseInt(votedIdx, 10) : undefined
+          });
+        } else {
+          setActivePoll(null);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => window.removeEventListener('storage', handleStorageUpdate);
+  }, []);
+
+  // Autoscroll to bottom whenever message queue updates
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isOpen, pinnedMsg, activePoll]);
+
+  function formatTime(date: Date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  // Double check if a user is currently banned or muted
+  const checkIfUserMuted = (username: string): boolean => {
+    try {
+      const mutedUsers = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
+      return mutedUsers.includes(username);
+    } catch {
+      return false;
+    }
+  };
+
+  const checkIfUserBanned = (username: string): boolean => {
+    try {
+      const bannedUsers = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
+      return bannedUsers.includes(username);
+    } catch {
+      return false;
+    }
+  };
+
+  const checkIfUserVerified = (username: string): boolean => {
+    try {
+      const verifiedUsers = JSON.parse(localStorage.getItem('bongo_stream_verified_users') || '[]');
+      return verifiedUsers.includes(username);
+    } catch {
+      return false;
+    }
+  };
+
+  // Parse custom premium tags & clickable URLs in text string
+  function renderMessageText(text: string) {
+    // 1. Convert URLs to custom click targets
+    const urlPattern = /(https?:\/\/[^\s]+)/gi;
+    
+    // Parse premium tags first
+    const parts = text.split(/(\[.*?\])/g);
+    
+    return (
+      <span className="flex flex-wrap items-center gap-1.5 font-sans break-words max-w-full">
+        {parts.map((part, index) => {
+          const matched = PREMIUM_REACTIONS.find(r => r.tag === part);
+          if (matched) {
+            return (
+              <span 
+                key={index} 
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black tracking-tight uppercase shadow-sm select-none bg-gradient-to-r ${matched.style} animate-pulse`}
+              >
+                <span className="text-[11px]">{matched.emoji}</span>
+                <span>{matched.badge}</span>
+              </span>
+            );
+          }
+
+          // Search URL inside string fragment
+          const subParts = part.split(urlPattern);
+          return subParts.map((sub, sIdx) => {
+            if (sub.match(urlPattern)) {
+              return (
+                <a 
+                  key={`link-${index}-${sIdx}`}
+                  href={sub}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-sky-400 hover:text-sky-305 underline break-all inline flex-wrap"
+                >
+                  {sub}
+                </a>
+              );
+            }
+            return <span key={`text-${index}-${sIdx}`}>{sub}</span>;
+          });
+        })}
+      </span>
+    );
+  }
+
+  // User details avatar rendering
+  function renderAvatar(avatar: string | undefined, name: string, isAdmin: boolean = false) {
+    if (isAdmin) {
+      return (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 via-rose-500 to-indigo-650 flex items-center justify-center text-white text-xs font-black shadow-lg border-2 border-amber-400 shrink-0 select-none animate-bounce-short">
+          👑
+        </div>
+      );
+    }
+
+    if (!avatar) {
+      const initial = name ? name.trim().charAt(0).toUpperCase() : 'B';
+      return (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 via-sky-600 to-teal-500 flex items-center justify-center text-white text-xs font-black shadow-inner border border-indigo-400 shrink-0 select-none">
+          {initial}
+        </div>
+      );
+    }
+
+    if (avatar.startsWith('data:') || avatar.startsWith('http')) {
+      return (
+        <img
+          src={avatar}
+          alt={name}
+          referrerPolicy="no-referrer"
+          className="w-8 h-8 rounded-full object-cover border border-slate-700 shadow-md shrink-0 select-none"
+        />
+      );
+    }
+
+    // Characters or single letters
+    return (
+      <div className="w-8 h-8 rounded-full bg-slate-950 border border-slate-800 text-sm flex items-center justify-center shadow-md shrink-0 select-none font-bold">
+        {avatar}
+      </div>
+    );
+  }
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!inputText.trim()) return;
+
+    if (!currentUser) return;
+
+    // Check if banned or muted
+    if (checkIfUserBanned(currentUser.username)) {
+      alert('সতর্কবার্তা: আপনাকে এডমিন প্যানেল থেকে ব্লক করা হয়েছে! আপনি কোনো মেসেজ প্রদান করতে পারবেন না।');
+      return;
+    }
+
+    if (checkIfUserMuted(currentUser.username)) {
+      alert('সতর্কবার্তা: আজেবাজে আচরণের কারণে এডমিন আপনাকে মিউট করে রেখেছে! চ্যাটে মেসেজ পাঠানো নিষ্ক্রিয়।');
+      return;
+    }
+
+    const myMessage: ChatMessage = {
+      id: `my-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: currentUser.name,
+      username: currentUser.username,
+      avatar: currentUser.avatar || '',
+      flag: currentUser.flag || '🇧🇩',
+      text: inputText.trim(),
+      time: formatTime(new Date()),
+      isMe: true,
+      isAdmin: isCurrentAdmin
+    };
+
+    try {
+      const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+      const db = dbRaw ? JSON.parse(dbRaw) : [];
+      db.push(myMessage);
+      if (db.length > 100) {
+        db.shift();
+      }
+      localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(db));
+      setMessages(db);
+    } catch (e) {
+      setMessages(prev => [...prev, myMessage]);
+    }
+    
+    // Auto sync state for administrative settings trigger channel
+    if (isCurrentAdmin) {
+      // Admin messages allow automatic pins if configured
+      if (inputText.toLowerCase().startsWith('/pin ')) {
+        const pinText = inputText.substring(5);
+        const newPin = { text: pinText, author: currentUser.name, avatar: currentUser.avatar };
+        setPinnedMsg(newPin);
+        localStorage.setItem('chat_pinned_comment', JSON.stringify(newPin));
+      }
+    }
+
+    setInputText('');
+    setShowEmojiTray(false);
+  };
+
+  const handleEmojiClick = (emojiTag: string) => {
+    setInputText(prev => prev + " " + emojiTag + " ");
+  };
+
+  // Cast Live poll votes
+  const handleVotePollOption = (idx: number) => {
+    if (!activePoll || activePoll.votedIndex !== undefined) return;
+
+    // Persist vote
+    const nextOptions = [...activePoll.options];
+    nextOptions[idx].votes = nextOptions[idx].votes + 1;
+
+    const nextPoll = {
+      ...activePoll,
+      options: nextOptions,
+    };
+
+    setActivePoll({
+      ...nextPoll,
+      votedIndex: idx
+    });
+
+    localStorage.setItem(`chat_poll_vote_${activePoll.question}`, String(idx));
+    localStorage.setItem('chat_active_poll', JSON.stringify(nextPoll));
+
+    // Boost total spectator votes visually
+    setOnlineCount(prev => prev + 1);
+  };
+
+  // Handle Admin controls triggers
+  const handleAdminAction = (type: 'ban' | 'mute' | 'unban' | 'unmute' | 'pin' | 'delete') => {
+    if (!moderatingMessage) return;
+    const targetUsername = moderatingMessage.username;
+
+    if (type === 'ban') {
+      const banned = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
+      if (!banned.includes(targetUsername)) {
+        banned.push(targetUsername);
+        localStorage.setItem('bongo_stream_banned_users', JSON.stringify(banned));
+      }
+      alert(`ইউজার @${targetUsername} কে সফলভাবে ব্যান করা হয়েছে!`);
+      
+      // Filter out their messages from shared storage
+      try {
+        const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+        const db = dbRaw ? JSON.parse(dbRaw) : [];
+        const filteredDb = db.filter((m: any) => m.username !== targetUsername);
+        localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredDb));
+        setMessages(filteredDb);
+      } catch (e) {
+        setMessages(p => p.filter(m => m.username !== targetUsername));
+      }
+    }
+
+    if (type === 'unban') {
+      const banned = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
+      const filtered = banned.filter((u: string) => u !== targetUsername);
+      localStorage.setItem('bongo_stream_banned_users', JSON.stringify(filtered));
+      alert(`ইউজার @${targetUsername} থেকে ব্যান প্রত্যাহার করা হয়েছে।`);
+    }
+
+    if (type === 'mute') {
+      const muted = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
+      if (!muted.includes(targetUsername)) {
+        muted.push(targetUsername);
+        localStorage.setItem('bongo_stream_muted_users', JSON.stringify(muted));
+      }
+      alert(`ইউজার @${targetUsername} কে সফলভাবে চ্যাটে মিউট করা হয়েছে।`);
+    }
+
+    if (type === 'unmute') {
+      const muted = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
+      const filtered = muted.filter((u: string) => u !== targetUsername);
+      localStorage.setItem('bongo_stream_muted_users', JSON.stringify(filtered));
+      alert(`ইউজার @${targetUsername} থেকে মিউট প্রত্যাহার করা হয়েছে।`);
+    }
+
+    if (type === 'pin') {
+      const newPin = {
+        text: moderatingMessage.text,
+        author: moderatingMessage.name,
+        avatar: moderatingMessage.avatar
+      };
+      setPinnedMsg(newPin);
+      localStorage.setItem('chat_pinned_comment', JSON.stringify(newPin));
+      alert('মেসেজটি সবার উপরে পিন করা হয়েছে!');
+    }
+
+    if (type === 'delete') {
+      try {
+        const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+        const db = dbRaw ? JSON.parse(dbRaw) : [];
+        const filteredDb = db.filter((m: any) => m.id !== moderatingMessage.id);
+        localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredDb));
+        setMessages(filteredDb);
+      } catch (e) {
+        setMessages(p => p.filter(m => m.id !== moderatingMessage.id));
+      }
+      alert('মেসেজটি চ্যাট বোর্ড থেকে অপসারণ করা হয়েছে!');
+    }
+
+    setModeratingMessage(null);
+  };
+
+  // Handle report submission
+  const handleReportAction = (reason: string) => {
+    if (!reportingMessage) return;
+    try {
+      const newReport = {
+        id: 'rep_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        reportedUser: reportingMessage.username,
+        reportedName: reportingMessage.name,
+        reportedMessage: reportingMessage.text,
+        messageId: reportingMessage.id,
+        messageTime: reportingMessage.time,
+        reason: reason,
+        reporterName: currentUser ? currentUser.name : 'Guest User',
+        reporterUsername: currentUser ? currentUser.username : 'guest',
+        reportedAt: new Date().toLocaleString('bn-BD', { hour12: true })
+      };
+      
+      // Post report server-side
+      fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReport)
+      })
+      .then(() => {
+        // Backup to localstorage
+        const reportsRaw = localStorage.getItem('bongo_live_chat_reports_db');
+        const reports = reportsRaw ? JSON.parse(reportsRaw) : [];
+        reports.push(newReport);
+        localStorage.setItem('bongo_live_chat_reports_db', JSON.stringify(reports));
+        
+        // Dispatch storage event so other tabs get it
+        window.dispatchEvent(new Event('storage'));
+      })
+      .catch(err => console.error('Error sending report:', err));
+      
+      alert(`ধন্যবাদ! @${reportingMessage.name} এর বিরুদ্ধে আপনার রিপোর্টটি সফলভাবে অ্যাডমিন প্যানেলে পাঠানো হয়েছে।`);
+    } catch (e) {
+      console.error(e);
+    }
+    setReportingMessage(null);
+  };
+
+  if (!isOpen) return null;
+
+  // Compute live percentages for Poll Option Cards
+  const totalPollVotes = activePoll ? activePoll.options.reduce((acc, curve) => acc + curve.votes, 0) : 0;
+
+  return (
+    <div 
+      id="live-stadium-chat-box"
+      className="bg-slate-900 border border-slate-805 rounded-xl overflow-hidden shadow-2xl flex flex-col font-sans h-[520px] w-full animate-fade-in relative z-20"
+    >
+      {/* Live Chat header */}
+      <div className="bg-slate-955 border-b border-slate-850 px-4 py-2.5 flex items-center justify-between select-none">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+          <h4 className="text-xs font-extrabold text-slate-105 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+            <MessageSquare className="w-4 h-4 text-sky-400" />
+            <span>Stadium Live Chat</span>
+          </h4>
+          <span className="text-[10px] bg-sky-500/10 text-sky-450 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-sans flex items-center gap-1 font-bold">
+            <Users className="w-3 h-3 text-sky-400 shrink-0 animate-pulse" />
+            <span>{onlineCount} Stadium Gfans</span>
+          </span>
+        </div>
+        
+        <button
+          id="btn-close-stadium-chat"
+          type="button"
+          onClick={onClose}
+          title="চ্যাট বক্স বন্ধ করুন"
+          className="p-1.5 bg-slate-950 hover:bg-rose-955/40 text-slate-400 hover:text-rose-455 rounded-lg border border-slate-800 hover:border-rose-900/15 transition-all cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* --- LIVE INTERACTIVE POLL DISPLAY ELEMENT --- */}
+      {activePoll && (
+        <div id="active-live-chat-poll" className="bg-gradient-to-r from-slate-950 to-indigo-950/20 border-b border-indigo-950/80 p-3 select-none">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest flex items-center gap-1 font-sans">
+              <Activity className="w-3 h-3 text-indigo-400 animate-pulse" />
+              <span>LIVE POLL • লাইভ জনমত</span>
+            </span>
+            {isCurrentAdmin && (
+              <button 
+                onClick={() => {
+                  setActivePoll(null);
+                  localStorage.removeItem('chat_active_poll');
+                }}
+                className="text-[8px] bg-rose-500/10 text-rose-455 hover:bg-rose-500/20 px-1 py-0.2 rounded font-sans cursor-pointer transition-colors"
+              >
+                রিসেট পোল
+              </button>
+            )}
+          </div>
+          <h4 className="text-[11px] font-black text-slate-100 leading-normal mb-2">{activePoll.question}</h4>
+          
+          <div className="grid grid-cols-2 gap-1.5">
+            {activePoll.options.map((opt, oIdx) => {
+              const pct = totalPollVotes > 0 ? Math.round((opt.votes / totalPollVotes) * 100) : 0;
+              const isVoted = activePoll.votedIndex === oIdx;
+              const hasVotedAny = activePoll.votedIndex !== undefined;
+
+              return (
+                <button
+                  key={oIdx}
+                  disabled={hasVotedAny}
+                  onClick={() => handleVotePollOption(oIdx)}
+                  className={`relative overflow-hidden text-left p-2 rounded-lg border text-[10px] transition-all duration-300 flex items-center justify-between font-bold cursor-pointer select-none
+                    ${isVoted
+                      ? 'bg-sky-500/10 border-sky-400 text-sky-400'
+                      : hasVotedAny
+                        ? 'bg-slate-950 border-slate-900 text-slate-450'
+                        : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'
+                    }
+                  `}
+                >
+                  {/* Progress background bar */}
+                  <div 
+                    className={`absolute left-0 top-0 bottom-0 transition-all duration-500 ease-out z-0
+                      ${isVoted ? 'bg-sky-400/10' : 'bg-slate-850'}
+                    `}
+                    style={{ width: hasVotedAny ? `${pct}%` : '0%' }}
+                  />
+
+                  <span className="relative z-10 block truncate max-w-[80%] font-semibold">
+                    {opt.text}
+                  </span>
+                  
+                  <span className="relative z-10 text-[9px] font-mono font-bold tracking-tight text-right">
+                    {hasVotedAny ? `${pct}%` : `${opt.votes} v`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* --- PINNED COMMENTS CONTAINER PANEL --- */}
+      {pinnedMsg && (
+        <div id="live-chat-pinned-box" className="bg-slate-950/90 border-b border-slate-850 px-3.5 py-2 flex items-start gap-2 select-none z-10">
+          <Pin className="w-3.5 h-3.5 text-amber-400 mt-1.5 shrink-0 rotate-45" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1">
+              <span className="text-[8px] font-black tracking-wider uppercase text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.2 rounded font-sans">
+                PINNED
+              </span>
+              <span className="text-[9px] font-bold text-slate-400">
+                @{pinnedMsg.author}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-200 font-medium leading-relaxed mt-0.5 max-w-full">
+              {renderMessageText(pinnedMsg.text)}
+            </p>
+          </div>
+          {isCurrentAdmin && (
+            <button
+              onClick={() => {
+                setPinnedMsg(null);
+                localStorage.removeItem('chat_pinned_comment');
+              }}
+              title="পিন সরিয়ে ফেলুন"
+              className="text-slate-500 hover:text-rose-450 p-1 rounded hover:bg-slate-900 cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Messages Scroll track */}
+      <div 
+        ref={scrollRef}
+        id="chat-messages-scroll-track"
+        className="flex-1 p-3.5 overflow-y-auto flex flex-col gap-3 selection:bg-slate-800"
+      >
+        {messages.length === 0 ? (
+          <div className="my-auto flex flex-col items-center justify-center text-slate-500 text-center p-6 select-none font-sans">
+            <MessageSquare className="w-9 h-9 text-slate-700 mb-2 animate-bounce" />
+            <p className="text-xs font-bold text-slate-400">কোনো ডেমো চ্যাট বা রোবট মেসেজ নেই</p>
+            <p className="text-[10px] text-slate-500 mt-1">প্রথম মেসেজটি লিখে চ্যাট রুম সচল করুন!</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isMsgAdmin = msg.isAdmin || msg.username === 'bongomember';
+            
+            return (
+              <div 
+                key={msg.id} 
+                className={`py-1 px-1.5 hover:bg-slate-800/25 rounded text-xs leading-relaxed animate-fade-in group relative select-all transition-colors
+                  ${isMsgAdmin ? 'border-l-2 border-amber-500/80 bg-gradient-to-r from-amber-500/5 to-transparent' : ''}
+                `}
+              >
+                <div className="flex items-start flex-wrap gap-x-1.5 gap-y-1">
+                  {/* Miniature Timestamp selector */}
+                  <span className="text-[9px] text-slate-500 font-mono select-none mt-0.5">
+                    {msg.time}
+                  </span>
+
+                  {/* Flag indicator icon */}
+                  <span className="text-xs select-none" title={`দেশ: ${msg.flag}`}>
+                    {msg.flag}
+                  </span>
+
+                  {/* Clickable Username handle */}
+                  <span 
+                    onClick={() => {
+                      if (isMsgAdmin) return; // Cannot modify/report official admin
+                      if (isCurrentAdmin) {
+                        setModeratingMessage(msg);
+                      } else if (currentUser && msg.username !== currentUser.username) {
+                        setSelectedReportReason('হ্যারেজমেন্ট / কটূক্তি করা');
+                        setReportingMessage(msg);
+                      } else if (!currentUser) {
+                        alert('রিপোর্ট করতে প্রথমে লগইন করুন!');
+                      }
+                    }}
+                    className={`font-semibold cursor-pointer hover:underline inline-flex items-center gap-0.5 shrink-0
+                      ${isMsgAdmin ? 'text-amber-400 font-extrabold' : 'text-sky-450 font-extrabold'}
+                    `}
+                    title={
+                      isMsgAdmin 
+                        ? "অফিসিয়াল এডমিন" 
+                        : isCurrentAdmin 
+                          ? "চ্যাট মডারেশন নিয়ন্ত্রণ করুন"
+                          : currentUser && msg.username !== currentUser.username 
+                            ? "এই ব্যবহারকারীকে রিপোর্ট করতে এখানে ক্লিক করুন" 
+                            : undefined
+                    }
+                  >
+                    @{msg.name}
+                    
+                    {/* Blue checkmark verification batch for premium members */}
+                    {!isMsgAdmin && (
+                      <CheckCircle className="w-3.5 h-3.5 text-sky-400 fill-sky-400/10 shrink-0" title="ভেরিফাইড স্পোর্টস মেম্বার" />
+                    )}
+
+                    {isMsgAdmin && (
+                      <CheckCircle className="w-3.5 h-3.5 text-amber-400 fill-amber-400/10 shrink-0" title="অফিসিয়াল এডমিন" />
+                    )}
+
+                    {isMsgAdmin && (
+                      <span className="text-[8px] bg-gradient-to-r from-amber-500 to-rose-600 text-slate-950 font-black px-1 rounded uppercase tracking-tighter shrink-0 select-none">
+                        ADMIN
+                      </span>
+                    )}
+                  </span>
+
+                  {/* Natural colon separator */}
+                  <span className="text-slate-500 font-semibold select-none">:</span>
+
+                  {/* Parsed horizontal content stream */}
+                  <span className="text-slate-200 leading-normal font-sans tracking-wide break-words flex-1 min-w-0">
+                    {renderMessageText(msg.text)}
+                  </span>
+                  
+                  {/* Moderator overlay badge */}
+                  {isCurrentAdmin && !isMsgAdmin && (
+                    <button
+                      onClick={() => setModeratingMessage(msg)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-[8px] px-1 bg-slate-950 border border-slate-800 text-rose-400 hover:text-rose-300 rounded cursor-pointer font-bold shrink-0 select-none ml-auto"
+                    >
+                      মডারেট
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* --- LIVE INTERACTIVE MODERATOR OPTION ACTION PROMPT OVERLAY --- */}
+      {moderatingMessage && (
+        <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm z-30 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 w-full max-w-xs shadow-2xl animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
+              <span className="text-11px font-black uppercase tracking-wider text-rose-455 flex items-center gap-1 font-sans">
+                <Ban className="w-3.5 h-3.5 text-rose-500" />
+                <span>চ্যাট মডারেশন নিয়ন্ত্রণ</span>
+              </span>
+              <button 
+                onClick={() => setModeratingMessage(null)}
+                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-950"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-normal mb-3 font-sans">
+              আপনি ইউজার <span className="text-sky-400 font-bold">@{moderatingMessage.name}</span> এর মেসেজ (<span className="text-slate-300 font-mono italic">"{moderatingMessage.text.substring(0, 16)}..."</span>) মডারেট করছেন। অ্যাকশন সিলেক্ট করুন:
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <button 
+                onClick={() => handleAdminAction('pin')}
+                className="w-full text-left py-1.5 px-3 bg-slate-950 hover:bg-amber-500/10 text-[11px] text-amber-400 hover:text-amber-305 border border-slate-850 rounded-lg font-bold flex items-center gap-1.8 cursor-pointer transition-colors"
+              >
+                <Pin className="w-3.5 h-3.5" />
+                <span>মেসেজটি সবার উপরে পিন (Pin Comment)</span>
+              </button>
+              
+              <button 
+                onClick={() => handleAdminAction('delete')}
+                className="w-full text-left py-1.5 px-3 bg-slate-950 hover:bg-slate-800 text-[11px] text-rose-455 border border-slate-850 rounded-lg font-bold flex items-center gap-1.8 cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                <span>চ্যাট বোর্ড থেকে মেসেজ মুছে দিন</span>
+              </button>
+
+              <button 
+                onClick={() => handleAdminAction('mute')}
+                className="w-full text-left py-1.5 px-3 bg-slate-950 hover:bg-slate-800 text-[11px] text-zinc-100 border border-slate-850 rounded-lg font-bold flex items-center gap-1.8 cursor-pointer transition-colors"
+              >
+                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+                <span>ইউজারকে মিউট করুন (Mute Keyboard)</span>
+              </button>
+
+              <button 
+                onClick={() => handleAdminAction('ban')}
+                className="w-full text-left py-1.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-[11px] text-rose-455 border border-rose-500/25 rounded-lg font-bold flex items-center gap-1.8 cursor-pointer transition-all"
+              >
+                <Ban className="w-3.5 h-3.5 text-rose-500" />
+                <span>ইউজার ব্যান এবং ব্লক করুন (Extreme Ban)</span>
+              </button>
+            </div>
+
+            <div className="mt-3.5 border-t border-slate-850 pt-2.5 flex justify-between gap-1.5">
+              <button
+                onClick={() => handleAdminAction('unmute')}
+                className="text-[9px] text-slate-450 hover:text-slate-300 underline font-semibold"
+              >
+                মিউট প্রত্যাহার
+              </button>
+              <button
+                onClick={() => handleAdminAction('unban')}
+                className="text-[9px] text-slate-450 hover:text-slate-300 underline font-semibold"
+              >
+                ব্যান প্রত্যাহার
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- LIVE INTERACTIVE USER REPORT OPTIONS OVERLAY --- */}
+      {reportingMessage && (
+        <div className="absolute inset-0 bg-slate-955/95 backdrop-blur-sm z-30 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 w-full max-w-xs shadow-2xl animate-scale-up text-xs font-sans">
+            <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
+              <span className="text-[11px] font-black uppercase tracking-wider text-rose-455 flex items-center gap-1.5">
+                <Ban className="w-3.5 h-3.5 text-rose-500" />
+                <span>রিপোর্ট করুন (Report User)</span>
+              </span>
+              <button 
+                onClick={() => setReportingMessage(null)}
+                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-950"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="mb-3 p-2 bg-slate-950 rounded border border-slate-850">
+              <p className="text-[10px] text-slate-500 font-mono">মেসেজ লেখক:</p>
+              <p className="font-bold text-sky-400">@{reportingMessage.name} ({reportingMessage.username})</p>
+              <p className="text-[10px] text-slate-500 font-mono mt-1">মেসেজ কনটেন্ট:</p>
+              <p className="text-slate-300 italic truncate mt-0.5">"{reportingMessage.text}"</p>
+            </div>
+
+            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">রিপোর্টের কারণ নির্বাচন করুন:</label>
+            <select
+              value={selectedReportReason}
+              onChange={(e) => setSelectedReportReason(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-2 text-slate-200 focus:outline-none mb-4 outline-none font-sans"
+            >
+              <option value="হ্যারেজমেন্ট / কটূক্তি করা">হ্যারেজমেন্ট / কটূক্তি করা (Harassment)</option>
+              <option value="স্প্যাম মেসেজ পাঠানো">স্প্যাম মেসেজ পাঠানো (Spamming)</option>
+              <option value="অশালীন বা আপত্তিকর ভাষা">অশালীন বা আপত্তিকর ভাষা (Abusive Language)</option>
+              <option value="বিভ্রান্তিকর তথ্য বা ভুয়া লিংক">বিভ্রান্তিকর তথ্য বা লিংক (Misleading / Fake Links)</option>
+              <option value="চ্যাটরুমের পরিবেশ ব্যাঘাত করা">চ্যাটরুমের পরিবেশ ব্যাঘাত করা (Disruption)</option>
+            </select>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setReportingMessage(null)}
+                className="flex-1 py-2 bg-slate-950 hover:bg-slate-850 border border-slate-800 text-[10px] font-bold rounded-lg cursor-pointer text-slate-300 text-center select-none"
+              >
+                বাতিল করুন
+              </button>
+              <button
+                type="button"
+                onClick={() => handleReportAction(selectedReportReason)}
+                className="flex-1 py-1.5 px-3 bg-rose-600 hover:bg-rose-505 text-white text-[10px] font-bold rounded-lg cursor-pointer text-center select-none shadow-md shadow-rose-950/20"
+              >
+                রিপোর্ট জমা দিন 🚨
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Emojis clickable panel drawer */}
+      {showEmojiTray && (
+        <div 
+          id="stadium-chat-emoji-panel"
+          className="absolute bottom-16 left-3 right-3 bg-slate-955 border border-slate-800 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 select-none z-25 animate-fade-in"
+        >
+          <div className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest flex items-center gap-1 border-b border-slate-850 pb-1.5 font-sans">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>প্রিমিয়াম এনিমেশন রিঅ্যাকশন পিলসমূহ</span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5">
+            {PREMIUM_REACTIONS.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                title={item.label}
+                onClick={() => handleEmojiClick(item.tag)}
+                className="hover:scale-105 active:scale-95 transition-transform cursor-pointer p-1.5 bg-slate-900 border border-slate-800 rounded-lg flex flex-col items-center gap-1"
+              >
+                <span className="text-lg">{item.emoji}</span>
+                <span className="text-[8px] uppercase tracking-tighter text-slate-400 font-bold font-sans">
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input controls form */}
+      <form 
+        onSubmit={handleSendMessage}
+        className="bg-slate-955 border-t border-slate-850 px-3.5 py-3 flex items-center gap-2 select-none"
+      >
+        {/* Toggle Emojis selection */}
+        <button
+          type="button"
+          id="btn-toggle-emoji-tray"
+          onClick={() => setShowEmojiTray(!showEmojiTray)}
+          className={`p-2 rounded-lg border transition-all cursor-pointer hover:scale-105 active:scale-95 shrink-0
+            ${showEmojiTray 
+              ? 'bg-sky-500/10 text-sky-400 border-sky-505/30' 
+              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+            }
+          `}
+          title="প্রিমিয়াম রিঅ্যাকশন এনিমেশন নির্বাচন"
+        >
+          <Smile className="w-4 h-4 text-amber-400" />
+        </button>
+
+        {/* Text Input area */}
+        <input
+          id="chat-text-input-field"
+          type="text"
+          placeholder={currentUser ? "প্রিমিয়াম ইমোজি সহ চ্যাট লিখুন..." : "ভেরিফাইড অ্যাকাউন্টে লগইন করে চ্যাট করুন..."}
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          className="bg-slate-900 border border-slate-800 focus:border-sky-505/50 rounded-lg px-3 py-2 text-xs text-slate-250 outline-none flex-1 min-w-0"
+          disabled={!currentUser}
+        />
+
+        {/* Submit button */}
+        <button
+          type="submit"
+          id="btn-submit-chat-message"
+          disabled={!inputText.trim() || !currentUser}
+          className="p-2 bg-sky-600 hover:bg-sky-505 disabled:bg-slate-900 text-white disabled:text-slate-600 rounded-lg transition-all shadow cursor-pointer shrink-0 active:scale-95"
+          title="পাঠান"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
+    </div>
+  );
+}

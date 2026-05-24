@@ -105,7 +105,7 @@ export default function ChannelCard({
         </button>
 
         {/* Real-time LIVE Status Badge with pulsing beacon (Top Left Corner) */}
-        {(workingReport === 'working' || isSelected) && (
+        {(workingReport === 'working') && (
           <div 
             id={`badge-live-marker-${channel.id}`}
             className="absolute -top-1 -left-1 px-1.5 py-0.5 bg-rose-600 border border-slate-950 rounded-md text-[7px] font-extrabold text-white uppercase tracking-wider flex items-center gap-1 shadow-lg animate-pulse z-20 select-none"
@@ -123,7 +123,7 @@ export default function ChannelCard({
         <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-slate-950 p-2 border border-slate-800/80 relative">
           
           {/* Subtle Translucent Watermark Overlay if Live */}
-          {(workingReport === 'working' || isSelected) && (
+          {(workingReport === 'working') && (
             <div className="absolute inset-0 bg-rose-600/[0.04] pointer-events-none flex items-center justify-center z-10 transition-all">
               <span className="absolute bottom-1 bg-rose-950/70 text-[6px] font-black text-rose-450 border border-rose-500/20 px-1 py-0.2 rounded tracking-widest font-sans scale-90 flex items-center gap-0.5 select-none uppercase">
                 <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />

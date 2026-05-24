@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free World Cup BD - Live Stream</title>
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            950: '#020617',
+                            900: '#0f172a',
+                            850: '#1e293b',
+                            800: '#334155'
+                        }
+                    },
+                    screens: {
+                        'xs': '400px',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Hls.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@550;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .space-grotesk {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .monospace {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Hide scrollbars for absolute visual purity */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #020617;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #38bdf8;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .marquee {
+            display: inline-block;
+            animation: marquee 25s linear infinite;
+        }
+        .marquee:hover {
+            animation-play-state: paused;
+        }
+        .video-contain { object-fit: contain; }
+        .video-cover { object-fit: cover; }
+        .video-fill { object-fit: fill; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/60 via-slate-950 to-slate-950 select-none">
+
+    <!-- Decorative Grid Mesh Overlay -->
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35 pointer-events-none"></div>
+
+    <!-- Atmospheric Light Flares -->
+    <div class="absolute top-[-10%] left-[20%] w-[400px] h-[400px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute top-[10%] right-[15%] w-[350px] h-[350px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+    <!-- Active App Landing & Player States Wrapper -->
+    <div id="pages-container">
+        
+        <!-- PAGE 1: LANDING PAGE -->
+        <div id="page-landing" class="flex flex-col">
+            <!-- Floating Header -->
+            <header class="sticky top-0 bg-slate-950/85 backdrop-blur-xl border-b border-slate-900 z-50">
+                <div class="max-w-7xl mx-auto px-4 md:px-6 h-18 flex items-center justify-between py-4">
+                    <!-- Brand Title -->
+                    <div class="flex items-center gap-3 cursor-pointer group" onclick="switchToApp()">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-sky-600 to-indigo-550 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                            <i data-lucide="tv" class="w-5.5 h-5.5 text-white animate-pulse"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-md md:text-lg font-black tracking-tight space-grotesk bg-gradient-to-r from-white via-slate-200 to-sky-400 bg-clip-text text-transparent" id="brand-en-text-header">
+                                    Free World Cup BD
+                                </span>
+                                <span class="text-[9px] font-sans font-black bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded-md shadow tracking-wide animate-pulse">
+                                    লাইভ
+                                </span>
+                            </div>
+                            <p class="text-[9px] text-slate-400 tracking-wide">ফ্রি লাইভ স্পোর্টস ও টিভি পোর্টাল</p>
+                        </div>
+                    </div>
+
+                    <!-- Header Actions -->
+                    <div class="flex items-center gap-3">
+                        <!-- Update trigger available on standard header -->
+                        <button onclick="triggerUpdateFlow()" class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500/10 to-amber-600/10 hover:from-amber-500/20 hover:to-amber-600/20 text-amber-400 text-xs font-bold rounded-lg border border-amber-500/35 hover:border-amber-400 transition-all cursor-pointer shadow animate-pulse">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <span class="hidden xs:inline">আপডেট চেক</span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        </button>
+
+                        <button onclick="switchToApp()" class="flex items-center gap-1.5 px-4 md:px-5 py-2 bg-gradient-to-r from-sky-600 to-indigo-650 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-black rounded-lg transition-all shadow-lg cursor-pointer">
+                            <i data-lucide="play" class="w-3.5 h-3.5 fill-current text-white"></i>
+                            <span>প্লেয়ারে যান</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Hero Section -->
+            <section class="max-w-7xl mx-auto px-4 md:px-6 pt-12 pb-6 flex flex-col items-center justify-center text-center relative z-10">
+                <div class="flex flex-col items-center gap-3 mb-6">
+                    <!-- Sports Brand Circle Circular Logo Vector -->
+                    <div class="relative w-36 h-36 md:w-44 md:h-44 flex items-center justify-center select-none" id="brand-logo-root">
+                        <!-- Neon Ring Animations -->
+                        <div class="absolute inset-0 rounded-full border-4 border-dashed border-sky-400/40 animate-[spin_40s_linear_infinite]"></div>
+                        <div class="absolute inset-1.5 rounded-full border-2 border-indigo-500/30 animate-[spin_20s_linear_infinite_reverse]"></div>
+                        <div class="absolute inset-3 bg-gradient-to-tr from-sky-600/35 to-indigo-650/45 rounded-full blur-xl opacity-80"></div>
+                        
+                        <!-- Base SVG Sports Circle Disc design -->
+                        <svg viewBox="0 0 400 400" class="w-full h-full relative z-10 drop-shadow-[0_0_25px_rgba(14,165,233,0.5)]">
+                            <defs>
+                                <radialGradient id="discGrad" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#0284c7" />
+                                    <stop offset="45%" stop-color="#0369a1" />
+                                    <stop offset="85%" stop-color="#0f172a" />
+                                    <stop offset="100%" stop-color="#020617" />
+                                </radialGradient>
+                                <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#fef08a" />
+                                    <stop offset="50%" stop-color="#eab308" />
+                                    <stop offset="100%" stop-color="#ca8a04" />
+                                </linearGradient>
+                                <linearGradient id="flagRed" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stop-color="#ef4444" />
+                                    <stop offset="100%" stop-color="#b91c1c" />
+                                </linearGradient>
+                                <linearGradient id="flagGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#10b981" />
+                                    <stop offset="100%" stop-color="#047857" />
+                                </linearGradient>
+                            </defs>
+
+                            <circle cx="200" cy="200" r="185" fill="url(#discGrad)" stroke="#38bdf8" stroke-width="6" />
+                            <circle cx="200" cy="200" r="176" fill="none" stroke="#6366f1" stroke-width="2" opacity="0.6" />
+
+                            <path d="M 50 100 L 200 200 L 350 100" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" />
+                            <path d="M 100 50 L 200 200 L 300 50" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" />
+
+                            <path d="M 280 150 Q 310 130 330 150 T 350 180 T 330 220 T 340 260 T 310 280 T 290 250 T 280 200 Z" fill="url(#flagGreen)" opacity="0.35" stroke="#059669" stroke-width="1.5" />
+                            <circle cx="315" cy="200" r="18" fill="url(#flagRed)" opacity="0.5" />
+
+                            <g transform="translate(310, 80) scale(0.45)" opacity="0.9">
+                                <rect x="0" y="0" width="100" height="60" rx="4" fill="#047857" stroke="#ffffff" stroke-width="2" />
+                                <circle cx="45" cy="30" r="18" fill="#e11d48" />
+                            </g>
+
+                            <!-- Batsman Silhouette Vector -->
+                            <g transform="translate(68, 120) scale(0.28)" opacity="0.85">
+                                <path d="M50 160 Q80 110 90 90 L110 50 L115 45 Q125 35 140 45 L155 60 L140 100 L110 160" stroke="#38bdf8" stroke-width="12" fill="none" stroke-linecap="round" />
+                                <line x1="115" y1="45" x2="200" y2="-10" stroke="url(#goldGrad)" stroke-width="15" stroke-linecap="round" />
+                                <circle cx="95" cy="70" r="16" fill="#ffffff" />
+                            </g>
+
+                            <!-- Footballer Silhouette Vector -->
+                            <g transform="translate(205, 125) scale(0.26)" opacity="0.85">
+                                <path d="M40 160 L60 90 L120 70 L140 100" stroke="#38bdf8" stroke-width="12" fill="none" stroke-linecap="round" />
+                                <path d="M60 90 L10 110 L5 125" stroke="#38bdf8" stroke-width="10" fill="none" stroke-linecap="round" />
+                                <circle cx="120" cy="50" r="16" fill="#ffffff" />
+                                <circle cx="160" cy="115" r="12" fill="#ffffff" stroke="#000000" stroke-width="2" />
+                            </g>
+
+                            <circle cx="200" cy="280" r="48" fill="#1e293b" stroke="#0ea5e9" stroke-width="2" opacity="0.8" />
+                            <path d="M 152 280 Q 200 295 248 280" fill="none" stroke="#059669" stroke-width="2" opacity="0.7" />
+                            <path d="M 152 280 Q 200 265 248 280" fill="none" stroke="#059669" stroke-width="2" opacity="0.7" />
+                            <path d="M 200 232 Q 215 280 200 328" fill="none" stroke="#059669" stroke-width="2" opacity="0.7" />
+                            <path d="M 200 232 Q 185 280 200 328" fill="none" stroke="#059669" stroke-width="2" opacity="0.7" />
+
+                            <path d="M 50 200 C 50 100, 350 100, 350 200" fill="none" stroke="#38bdf8" stroke-width="3" opacity="0.4" />
+
+                            <g transform="translate(145, 30)">
+                                <rect x="0" y="0" width="110" height="34" rx="17" fill="url(#flagRed)" stroke="#ef4444" stroke-width="1.5" />
+                                <text x="55" y="21" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">সম্পূর্ণ ফ্রি</text>
+                            </g>
+
+                            <text x="200" y="115" fill="#ffffff" font-size="32" font-weight="900" text-anchor="middle" font-family="sans-serif" stroke="#000000" stroke-width="3.5" paint-order="stroke" id="brand-bn-text-disc">বিডি লাইভ টিভি</text>
+                            <text x="200" y="152" fill="url(#goldGrad)" font-size="18" font-weight="800" text-anchor="middle" font-family="sans-serif" stroke="#000000" stroke-width="2.5" paint-order="stroke" id="brand-en-text-disc">BD LIVE TV</text>
+                        </svg>
+                    </div>
+
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-950/60 border border-sky-500/20 shadow mt-2 text-[11px] font-semibold text-slate-200">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        <span>সরাসরি সম্পূর্ণ ফ্রিতে ২২০০+ বিশ্বখ্যাত লাইভ খেলাধুলা ও সকল টিভি চ্যানেল</span>
+                    </div>
+                </div>
+
+                <h2 class="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight max-w-4xl leading-tight text-white mb-5">
+                    বাংলাদেশের নাম্বার ১ স্পোর্টস প্রিমিয়ার <br>
+                    <span class="bg-gradient-to-r from-sky-400 via-yellow-200 to-emerald-400 bg-clip-text text-transparent space-grotesk" id="hero-brand-en-text">
+                        Free World Cup BD Live TV
+                    </span>
+                </h2>
+
+                <p class="text-slate-400 text-xs md:text-sm max-w-2xl leading-relaxed mb-8">
+                    কোনো বাফারিং ছাড়াই ফ্রিতে উপভোগ করুন সমস্ত লাইভ টোয়েন্টি-টোয়েন্টি ক্রিকেট, ফুটবল লিগ আর দেশী-বিদেশী সকল লাইভ টিভি চ্যালন! স্পষ্ট এইচডি লাইভ সিগন্যাল ব্যাকআপ সাপোর্ট।
+                </p>
+            </section>
+
+            <!-- Sports Special Broadcast Carousel -->
+            <section class="max-w-4xl w-full mx-auto px-4 md:px-6 pb-14 relative z-10">
+                <div class="mb-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="trophy" class="w-5 h-5 text-yellow-450 animate-bounce"></i>
+                        <h3 class="text-xs md:text-sm font-bold text-slate-100 uppercase tracking-wider">চলতি স্পেশাল স্পোর্টস ও লাইভ কভারেজ (Carousel)</h3>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="changeSlide(-1)" class="p-1 px-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-lg text-slate-300 cursor-pointer transition-colors">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="changeSlide(1)" class="p-1 px-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-lg text-slate-300 cursor-pointer transition-colors">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Slide Panel Container -->
+                <div class="relative overflow-hidden w-full rounded-2xl md:rounded-3xl border border-slate-800 bg-slate-900 duration-300" id="carousel-interactive-panel">
+                    <!-- Slides are handled dynamically by script -->
+                    <div id="carousel-slides-track"></div>
+                </div>
+
+                <!-- Indicators -->
+                <div class="flex justify-center gap-1.5 mt-4" id="carousel-indicators"></div>
+            </section>
+
+            <!-- Core Technologies Features Hub -->
+            <section class="max-w-5xl w-full mx-auto px-4 md:px-6 pb-20 relative z-10">
+                <div class="text-center mb-10">
+                    <h3 class="text-md md:text-lg font-bold text-white tracking-tight">সর্বোত্তম খেলা সম্প্রচারের বিশেষ টেকনোলজিসমূহ</h3>
+                    <p class="text-slate-450 text-xs mt-1">Free World Cup BD প্ল্যাটফর্মের সেরা ৩টি স্তম্ভ</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Feature 1 -->
+                    <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850 flex flex-col justify-between group">
+                        <div>
+                            <div class="w-11 h-11 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-xl flex items-center justify-center mb-4">
+                                <i data-lucide="languages" class="w-5.5 h-5.5"></i>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-105">রিয়েল-টাইম ফুটবল স্কোরবোর্ড</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed mt-2">
+                                লাইভ খেলা দেখার স্ক্রিনেই সরাসরি চলমান ম্যাচের সর্বশেষ উইকেটের অবস্থা, রান রেট, স্কোর এবং খেলার সময় দেখে নিন।
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-900 text-xs text-sky-450 font-semibold cursor-pointer" onclick="switchToApp()">
+                            প্লেয়ারে দেখুন &rarr;
+                        </div>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850 flex flex-col justify-between group">
+                        <div>
+                            <div class="w-11 h-11 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center mb-4">
+                                <i data-lucide="smartphone" class="w-5.5 h-5.5"></i>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-105">মোবাইল অ্যাপ ফ্রেন্ডলি ফাস্ট বাফারিং</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed mt-2">
+                                বিশেষভাবে লো-ব্যান্ডউইথ ব্যবহারকারীদের জন্য অপ্টিমাইজড প্লেয়ার। আপনার ৩জি, ৪জি বা ব্রডব্যান্ড লাইনে থাকবে জিরো-বাফারিং।
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-900 text-xs text-emerald-450 font-semibold cursor-pointer" onclick="switchToApp()">
+                            প্লেয়ারে যান &rarr;
+                        </div>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850 flex flex-col justify-between group">
+                        <div>
+                            <div class="w-11 h-11 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl flex items-center justify-center mb-4">
+                                <i data-lucide="shield-check" class="w-5.5 h-5.5"></i>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-105">নিরাপদ ও স্থায়ী ফেভারিট ট্র্যাকিং</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed mt-2">
+                                আপনার প্রিয় পছন্দের চ্যানেলগুলোকে স্টার মার্ক করে রাখুন। যা সরাসরি ব্রাউজার বা অ্যাপ মেমরিতে সুরক্ষিত থাকবে আজীবনের জন্য।
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-900 text-xs text-amber-450 font-semibold cursor-pointer" onclick="switchToApp()">
+                            ফেভারিট চেক করুন &rarr;
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+
+        <!-- PAGE 2: MAIN STREAMING APP INTERFACE -->
+        <div id="page-app" class="hidden flex flex-col min-h-screen">
+            <!-- App Header -->
+            <header class="sticky top-0 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 z-40">
+                <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <button onclick="switchToLanding()" class="p-2 bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white rounded-lg border border-slate-800 transition-all cursor-pointer">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        </button>
+                        <div>
+                            <span class="text-xs font-bold text-sky-400">লাইভ সম্প্রচার কেন্দ্র</span>
+                            <h1 class="text-sm font-black text-slate-100 uppercase tracking-tight space-grotesk" id="app-header-title">Free World Cup BD</h1>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div id="connection-status-pill" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold uppercase tracking-wider animate-pulse">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>সার্ভার সক্রিয়</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Streaming Layout Grid -->
+            <main class="max-w-7xl w-full mx-auto px-4 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start">
+                
+                <!-- LEFT SIDEBAR: ACTIVE IPTV VIDEO PLAYER BOX (5 Columns) -->
+                <div class="col-span-1 lg:col-span-5 flex flex-col gap-4" id="player-view-container">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative">
+                        <!-- Custom Video Player Wrapper -->
+                        <div class="relative aspect-video bg-black flex items-center justify-center p-0" id="video-frame-disc">
+                            
+                            <!-- Custom HTML5 video component -->
+                            <video id="hls-native-embed-video" class="w-full h-full video-contain" webkit-playsinline playsinline autoplay="true" muted="false"></video>
+
+                            <!-- Glass glare filter layer -->
+                            <div class="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-10"></div>
+
+                            <!-- Outer Cyber Neon corner monitor accents -->
+                            <div class="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-sky-505 pointer-events-none"></div>
+                            <div class="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-sky-505 pointer-events-none"></div>
+                            <div class="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-sky-505 pointer-events-none"></div>
+                            <div class="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-sky-505 pointer-events-none"></div>
+
+                            <!-- Screen scanlines filter -->
+                            <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.15)_50%)] bg-[size:100%_4px] pointer-events-none z-10"></div>
+
+                            <!-- Loading overlay indicator -->
+                            <div id="video-player-loader" class="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-3 z-20 transition-opacity hidden">
+                                <div class="relative w-11 h-11">
+                                    <div class="absolute inset-0 border-3 border-slate-800 rounded-full"></div>
+                                    <div class="absolute inset-0 border-3 border-sky-500 rounded-full animate-spin border-t-transparent"></div>
+                                </div>
+                                <span class="text-xs font-semibold text-slate-300">বাফারিং ছাড়াই লোড হচ্ছে...</span>
+                            </div>
+
+                            <!-- Play Back Error overlay -->
+                            <div id="video-player-error" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-3 z-20 text-center px-4 hidden">
+                                <i data-lucide="alert-circle" class="w-10 h-10 text-rose-500"></i>
+                                <span class="text-xs font-bold text-slate-200">প্লেব্যাকে ত্রুটি দেখা দিয়েছে</span>
+                                <p class="text-[10px] text-slate-400 max-w-xs">এই চ্যানেলটি সাময়িকভাবে অফলাইনে থাকতে পারে। অনুগ্রহ করে কিছুক্ষণ পর চেষ্টা করুন অথবা অন্য কোনো সার্ভার সিলেক্ট করুন।</p>
+                                <button onclick="retryCurrentChannel()" class="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold rounded-lg border border-slate-700 cursor-pointer">পুনরায় কানেক্ট করুন</button>
+                            </div>
+
+                            <!-- Subtitle Closed Caption Display overlay -->
+                            <div id="video-player-cc-box" class="absolute bottom-11 inset-x-4 text-center z-15 pointer-events-none select-none hidden">
+                                <span class="bg-black/85 text-white border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-medium inline-block text-center leading-relaxed max-w-[90%] whitespace-pre-wrap monospace" id="cc-text-display">Commentator: 'Connecting to sports engine...'</span>
+                            </div>
+                        </div>
+
+                        <!-- Real-time customizable video controllers -->
+                        <div class="bg-slate-950 border-t border-slate-900 p-3 flex flex-col gap-2.5 select-none text-slate-205">
+                            <div class="flex items-center justify-between gap-4">
+                                <!-- LEFT CONTROLS -->
+                                <div class="flex items-center gap-2">
+                                    <button onclick="togglePlayState()" class="p-2 bg-slate-900 hover:bg-slate-850 rounded-xl hover:text-white cursor-pointer" id="btn-play-pause">
+                                        <i data-lucide="pause" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="toggleMuteState()" class="p-2 bg-slate-900 hover:bg-slate-850 rounded-xl hover:text-white cursor-pointer" id="btn-volume-mute">
+                                        <i data-lucide="volume-2" class="w-4 h-4"></i>
+                                    </button>
+                                    <input type="range" min="0" max="100" value="80" oninput="changeVolumeSlider(this.value)" class="w-16 accent-sky-500 h-1 rounded bg-slate-800 cursor-pointer">
+                                </div>
+
+                                <!-- RIGHT CONTROLS -->
+                                <div class="flex items-center gap-2">
+                                    <!-- CC Commentary toggle -->
+                                    <button onclick="toggleCcState()" id="btn-cc-caption" title="সহজ বাংলা সাবটাইটেল (CC)" class="p-2 bg-slate-900 border border-transparent rounded-xl text-slate-450 hover:text-white cursor-pointer relative">
+                                        <i data-lucide="languages" class="w-4 h-4"></i>
+                                        <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping hidden" id="cc-active-indicator"></span>
+                                    </button>
+
+                                    <!-- Aspect ratio stretcher -->
+                                    <button onclick="cycleAspectRatio()" id="btn-aspect-ratio" title="ভিডিও সাইজ সোজা করুন" class="p-2 bg-slate-900 hover:bg-slate-850 rounded-xl hover:text-white cursor-pointer flex items-center gap-1 text-[10px] font-bold">
+                                        <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+                                        <span id="aspect-ratio-label">Fit</span>
+                                    </button>
+
+                                    <!-- Quality configuration dropdown -->
+                                    <div class="relative">
+                                        <button onclick="toggleQualityDropdown()" id="btn-quality-dropdown" class="p-2 bg-slate-900 hover:bg-slate-850 rounded-xl hover:text-white cursor-pointer flex items-center gap-1 text-[10px] font-bold">
+                                            <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                                            <span id="quality-active-label">Auto</span>
+                                        </button>
+                                        <div id="quality-dropdown-menu" class="absolute bottom-10 right-0 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 min-w-[120px] z-50 hidden">
+                                            <button onclick="selectQualityOption('Auto')" class="w-full text-left p-1.5 px-3 rounded-lg text-[10px] font-bold hover:bg-sky-5s text-sky-400 bg-sky-500/5">Auto (স্বয়ংক্রিয়)</button>
+                                            <button onclick="selectQualityOption('1080p')" class="w-full text-left p-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-300 hover:bg-slate-800">1080p Full HD</button>
+                                            <button onclick="selectQualityOption('720p')" class="w-full text-left p-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-300 hover:bg-slate-800">720p HD Ready</button>
+                                            <button onclick="selectQualityOption('480p')" class="w-full text-left p-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-300 hover:bg-slate-800">480p SD Stand</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Rotation Landscape Mode -->
+                                    <button onclick="toggleLandscapeRotation()" title="ভিডিও স্ক্রিন আড়াআড়ি করুন" class="p-2 bg-slate-900 hover:bg-slate-850 rounded-xl hover:text-white cursor-pointer md:hidden">
+                                        <i data-lucide="smartphone" class="w-4 h-4 text-sky-400"></i>
+                                    </button>
+
+                                    <!-- Maximize native controls -->
+                                    <button onclick="triggerMaximizeVideo()" class="p-2 bg-slate-900 hover:bg-slate-850 rounded-xl hover:text-white cursor-pointer">
+                                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Channel Info Block -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl select-none">
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                            <div>
+                                <span class="text-[9px] font-mono bg-sky-500/10 text-sky-450 border border-sky-500/15 px-2 py-0.5 rounded-md font-bold uppercase tracking-widest" id="selected-channel-group-tag">Sports Category</span>
+                                <h3 class="text-base font-black text-slate-100 tracking-tight mt-1 leading-snug" id="selected-channel-name-title">Loading Stream Channels...</h3>
+                            </div>
+                            <!-- Favorite Star -->
+                            <button onclick="toggleFavoriteCurrentChannel()" class="p-2 bg-slate-950 hover:bg-slate-850 text-amber-500 hover:text-amber-400 rounded-xl border border-slate-850 cursor-pointer" id="btn-favorite-current-channel">
+                                <i data-lucide="heart" class="w-5 h-5 fill-current"></i>
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-400 font-sans leading-relaxed" id="selected-channel-desc">
+                            খাড়া ৪কে সিগন্যালে জিরো বাফারিং এ সম্প্রচারিত হচ্ছে দেশী-বিদেশী জনপ্রিয় খেলাধুলা এবং টিভি এন্টারটেইনমেন্ট ফিড।
+                        </p>
+                    </div>
+
+                    <!-- Multi-Server selection framework layout -->
+                    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-201 flex items-center gap-1.5">
+                                <i data-lucide="zap" class="w-4 h-4 text-sky-400"></i>
+                                <span>হাই-পারফরম্যান্স মাল্টি-সার্ভার রিমোট স্পিড</span>
+                            </span>
+                            <span class="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20" id="server-active-pill">Singapore 10G Active</span>
+                        </div>
+                        <!-- Scrollable Row of server selection button boxes -->
+                        <div class="flex gap-2.5 overflow-x-auto pb-1.5" id="server-selection-pills-container">
+                            <button onclick="selectServer('Singapore Premium (WiFi 10G Feed)', this)" class="shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 bg-sky-500/10 border-sky-400 min-w-[115px]">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="text-[10px] font-bold text-slate-200">Singapore SG</span>
+                                    <span class="text-[8px] text-slate-500 font-mono">5ms</span>
+                                </div>
+                                <div class="flex items-center justify-between w-full text-[8px] text-slate-400 leading-none">
+                                    <span>Load: 12%</span>
+                                    <span class="text-[8px] font-bold text-sky-450">Active</span>
+                                </div>
+                            </button>
+                            <button onclick="selectServer('Dhaka BDIX Speed Bypass Stream', this)" class="shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 bg-slate-950 hover:bg-slate-900 border-slate-800 min-w-[115px]">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="text-[10px] font-bold text-slate-200">Dhaka BDIX</span>
+                                    <span class="text-[8px] text-slate-500 font-mono">2ms</span>
+                                </div>
+                                <div class="flex items-center justify-between w-full text-[8px] text-slate-400 leading-none">
+                                    <span>Load: 8%</span>
+                                    <span class="text-[8px] font-bold text-slate-500">Standby</span>
+                                </div>
+                            </button>
+                            <button onclick="selectServer('Mumbai Edge High-Definition Server', this)" class="shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 bg-slate-950 hover:bg-slate-900 border-slate-800 min-w-[115px]">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="text-[10px] font-bold text-slate-200">Mumbai IN</span>
+                                    <span class="text-[8px] text-slate-500 font-mono">18ms</span>
+                                </div>
+                                <div class="flex items-center justify-between w-full text-[8px] text-slate-400 leading-none">
+                                    <span>Load: 25%</span>
+                                    <span class="text-[8px] font-bold text-slate-500">Standby</span>
+                                </div>
+                            </button>
+                            <button onclick="selectServer('Frankfurt Backup Secure IPTV Relay', this)" class="shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 bg-slate-950 hover:bg-slate-900 border-slate-800 min-w-[115px]">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="text-[10px] font-bold text-slate-200">Frankfurt EU</span>
+                                    <span class="text-[8px] text-slate-500 font-mono">140ms</span>
+                                </div>
+                                <div class="flex items-center justify-between w-full text-[8px] text-slate-400 leading-none">
+                                    <span>Load: 2%</span>
+                                    <span class="text-[8px] font-bold text-slate-500">Standby</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Live-Chat Panel Container -->
+                    <div class="flex flex-col gap-2.5 select-none" id="chat-outer-box">
+                        <button onclick="toggleChatPanel()" class="w-full py-2.5 rounded-xl border border-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow active:scale-95 bg-rose-500/10 text-rose-400 hover:bg-rose-500/15" id="btn-toggle-chat">
+                            <i data-lucide="message-square" class="w-4 h-4 text-sky-455"></i>
+                            <span id="chat-toggle-text">লাইভ চ্যাট ক্লোজ করুন (Collapse Chat)</span>
+                        </button>
+
+                        <div id="app-chat-panel" class="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-[320px] shadow-2xl relative">
+                            <!-- Chat Area Header -->
+                            <div class="p-3 border-b border-slate-800 flex justify-between items-center px-4">
+                                <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                                    <span>ব্যবহৃত গ্লোবাল চ্যাট রুম</span>
+                                </span>
+                                <span class="text-[9px] font-mono text-slate-500" id="chat-room-counts">অনলাইন ক্লায়েন্ট: ১,৪৫০ জন</span>
+                            </div>
+
+                            <!-- Comments Scrolling Container -->
+                            <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3" id="chat-messages-scroll-well"></div>
+
+                            <!-- Comment inputs row -->
+                            <form onsubmit="handleSendChatMessage(event)" class="border-t border-slate-800 p-2.5 bg-slate-950 rounded-b-2xl flex gap-2">
+                                <input type="text" id="chat-input-element" placeholder="বাংলায় কিছু মন্তব্য লিখুন..." class="flex-1 bg-slate-900 border border-slate-800 focus:border-sky-500 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none placeholder-slate-500 font-sans">
+                                <button type="submit" class="p-2 py-2.5 bg-sky-600 hover:bg-sky-505 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors px-4">
+                                    <span>প্রেরণ</span>
+                                    <i data-lucide="arrow-left" class="w-3.5 h-3.5 rotate-180"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT CONTENT PANEL: Search capabilities, categories tab list & dynamic columns grid (7 Columns) -->
+                <div class="col-span-1 lg:col-span-7 flex flex-col gap-5">
+                    
+                    <!-- Ad Banner Box -->
+                    <div class="bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900/40 border border-purple-500/20 rounded-2xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group select-none">
+                        <div class="absolute top-0 right-0 p-1 bg-purple-500/10 text-purple-400 border-b border-l border-purple-500/20 text-[7px] uppercase tracking-widest font-mono font-bold">Sponsor Partner</div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl animate-spin" style="animation-duration: 8s;">👑</span>
+                            <div>
+                                <h4 class="text-xs font-black text-amber-400 tracking-tight space-grotesk">Adsterra Premium Sports Sponsor</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5 leading-snug">উচ্চ-গতি সম্পন্ন নো-বাফারিং লাইভ স্পোর্টস সম্প্রচার বজায় রাখতে বড় সহায়তা করে।</p>
+                            </div>
+                        </div>
+                        <a href="https://adsterra.com" target="_blank" class="p-2 px-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-[10px] font-black tracking-tight shrink-0 cursor-pointer">বিজ্ঞাপন দেখুন ⚡</a>
+                    </div>
+
+                    <!-- Search and filters Deck -->
+                    <div class="lg:sticky lg:top-20 z-20 bg-slate-900 rounded-2xl p-4 border border-slate-800 shadow-xl flex flex-col gap-4">
+                        
+                        <!-- Notice Marquee Box -->
+                        <div class="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 flex items-center gap-2 overflow-hidden">
+                            <span class="flex items-center gap-1 shrink-0 text-[10px] font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tracking-wide">
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                চলতি ঘোষণা
+                            </span>
+                            <div class="flex-1 overflow-hidden relative w-full flex items-center select-none cursor-pointer">
+                                <div class="text-xs text-slate-300 font-medium whitespace-nowrap marquee" id="marquee-stream-text">
+                                    স্বাগতম Free World Cup BD-তে! 📺 সম্পুর্ণ ফ্রিতে স্পোর্টস প্লেয়ারে উপভোগ করুন প্রিয় সব লাইভ স্পোর্টস, ঘরোয়া ও আন্তর্জাতিক খেলাধুলা এবং বিনোদন চ্যানেল। কোনো চ্যানেল সাময়িকভাবে বন্ধ থাকলে প্লেয়ারে অন্য লিংক অপশন সিলেক্ট করুন।
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real-time filtering Input text -->
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                                <i data-lucide="search" class="w-4.5 h-4.5"></i>
+                            </span>
+                            <input id="search-input-box" type="text" placeholder="চ্যানেলের নাম দিয়ে খুঁজুন..." oninput="handleSearchInputChange(this.value)" class="w-full pl-10 pr-10 py-3 bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500/15 transition-all font-sans">
+                        </div>
+
+                        <!-- Scrollable Row Categories selectors -->
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs text-slate-400 font-semibold px-1">ক্যাটাগরি সমূহ</span>
+                            <div class="flex gap-2 overflow-x-auto pb-1" id="category-pills-row">
+                                <button onclick="selectCategory('all')" id="cat-btn-all" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-sky-600 text-white border-sky-500 shadow-lg shadow-sky-950/40">
+                                    <span>সব চ্যানেল</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-sky-700 rounded-full" id="count-all">0</span>
+                                </button>
+                                <button onclick="selectCategory('favorites')" id="cat-btn-favorites" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <i data-lucide="heart" class="w-3.5 h-3.5 text-rose-500 fill-rose-500"></i>
+                                    <span>প্রিয় তালিকা</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-favorites">0</span>
+                                </button>
+                                <button onclick="selectCategory('Sports')" id="cat-btn-Sports" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <span>খেলাধুলা</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-Sports">0</span>
+                                </button>
+                                <button onclick="selectCategory('Bangla')" id="cat-btn-Bangla" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <span>বাংলাদেশি</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-Bangla">0</span>
+                                </button>
+                                <button onclick="selectCategory('News')" id="cat-btn-News" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <span>খবর</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-News">0</span>
+                                </button>
+                                <button onclick="selectCategory('Music')" id="cat-btn-Music" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <span>গান</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-Music">0</span>
+                                </button>
+                                <button onclick="selectCategory('Movies')" id="cat-btn-Movies" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <span>সিনেমা</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-Movies">0</span>
+                                </button>
+                                <button onclick="selectCategory('Kids')" id="cat-btn-Kids" class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200">
+                                    <span>কার্টুন</span>
+                                    <span class="text-[9px] font-mono px-1.5 bg-slate-900 rounded-full" id="count-Kids">0</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtered Grid of channels cards -->
+                    <div class="flex flex-col gap-3">
+                        <div class="flex justify-between items-center px-1 text-slate-400">
+                            <span class="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider">
+                                <i data-lucide="list-filter" class="w-4 h-4 text-sky-450"></i> চ্যানেলসমূহ
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-525" id="filtered-channels-count">মোট ফিল্টার্ড: ০টি</span>
+                        </div>
+
+                        <!-- Active list cards display track -->
+                        <div id="channel-cards-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[500px] lg:max-h-[calc(100vh-280px)] overflow-y-auto pr-1 pb-4"></div>
+
+                        <!-- Skeleton Loader / Fallback -->
+                        <div id="loader-fallback-block" class="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center shadow-xl flex flex-col items-center justify-center">
+                            <div class="relative w-12 h-12 mb-4">
+                                <span class="absolute inset-0 border-3 border-slate-800 rounded-full"></span>
+                                <span class="absolute inset-0 border-3 border-sky-500 rounded-full animate-spin border-t-transparent"></span>
+                            </div>
+                            <h3 class="text-sm font-semibold text-slate-300">চ্যানেল ডেটা লোড হচ্ছে...</h3>
+                        </div>
+
+                        <!-- Error Banner Fallback -->
+                        <div id="error-fallback-block" class="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center shadow-xl flex flex-col items-center justify-center hidden">
+                            <i data-lucide="alert-circle" class="w-12 h-12 text-rose-500 mb-3 animate-[pulse_1.5s_infinite]"></i>
+                            <h3 class="text-sm font-bold text-slate-200">সার্ভার সংযোগে ত্রুটি</h3>
+                            <p class="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">আইপিটিভি প্লেলিস্ট ডেটা অথবা সার্ভার সার্ভিস এপিআই লোড হতে পারছে না। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।</p>
+                            <button onclick="fetchLatestChannelsDataSet()" class="mt-4 px-4 py-2 bg-slate-805 hover:bg-slate-755 text-xs font-semibold text-white rounded-lg border border-slate-700 cursor-pointer">পুনরায় চেষ্টা করুন</button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom promotional ad wrapper -->
+                    <div class="bg-gradient-to-r from-slate-900/40 via-sky-950/20 to-indigo-950/40 border border-sky-500/15 rounded-2xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group select-none">
+                        <div class="absolute top-0 right-0 p-1 bg-sky-500/10 text-sky-400 border-b border-l border-sky-500/20 text-[7px] uppercase tracking-widest font-mono font-bold">Sponsor Partner</div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl animate-bounce">📱</span>
+                            <div>
+                                <h4 class="text-xs font-black text-sky-400 font-sans tracking-tight">বিডি লাইভ অফিশিয়াল প্রমোটর</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5 leading-snug">সর্বনিম্ন ডেটা খরচে সম্পূর্ণ এইচডি বিশ্বমানের কাপ এবং ক্রিকেট উপভোগ করতে এপিক অ্যান্ড্রয়েড অ্যাপ নামিয়ে রাখুন।</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+
+    <!-- DYNAMIC SYSTEM VERSION UPDATE DIALOG COMPONENT OVERLAY -->
+    <div id="update-checker-modal-element" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden text-center">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative select-none animate-fade-in text-left">
+            <button onclick="closeUpdateDialog()" class="absolute top-4 right-4 p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white cursor-pointer transition-colors">
+                <i data-lucide="x" class="w-4.5 h-4.5"></i>
+            </button>
+
+            <div class="text-center">
+                <div class="w-11 h-11 mx-auto rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3.5 text-amber-500">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-amber-400" id="update-icon-rotor"></i>
+                </div>
+                <h3 class="text-sm font-extrabold text-slate-100 tracking-tight leading-none mb-1">সিস্টেম সংস্করণ যাচাইকারক</h3>
+                <span class="text-[10px] font-mono text-slate-500" id="installed-version-badge">Current version installed: v1.0.0</span>
+            </div>
+
+            <!-- Loader scan block -->
+            <div id="update-progress-stage-block" class="my-5 flex flex-col items-center justify-center gap-2.5">
+                <div class="flex gap-1 items-center justify-center">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style="animation-delay: 0ms;"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style="animation-delay: 150ms;"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style="animation-delay: 300ms;"></span>
+                </div>
+                <span class="text-[10px] text-slate-400 font-medium">হালনাগাদ ফাইল স্ক্যান করা হচ্ছে...</span>
+            </div>
+
+            <!-- Custom message blocks -->
+            <div id="update-details-stage-block" class="hidden my-4 flex flex-col gap-3">
+                <div class="py-2.5 px-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-xs font-bold leading-relaxed">
+                    ⚠️ একটি নতুন সংস্করণ আপডেট (v1.1.0) উপলব্ধ আছে।
+                </div>
+                <p class="text-[10px] text-slate-400 leading-snug">নতুন সংস্করণে প্লেয়ারের পারফরম্যান্স উন্নত করা হয়েছে এবং নতুন প্রিমিয়াম স্পোর্টস চ্যানেল যুক্ত করা হয়েছে। এখনই ইনস্টল করুন!</p>
+                <button onclick="beginSystemInstallation()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black tracking-wide rounded-xl text-xs transition-colors cursor-pointer shadow-lg">আপডেট ইনস্টল করুন 🚀</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- FULL SCREEN TAKEOVER LIVE APK UPDATE INSTALL SYSTEM -->
+    <div id="immersive-update-takeover" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 md:p-8 bg-slate-950 text-slate-100 select-none overflow-hidden hidden">
+        <!-- Background elements -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-25 pointer-events-none"></div>
+        <div class="absolute top-[15%] left-[20%] w-[380px] h-[380px] bg-sky-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-[10%] right-[15%] w-[320px] h-[320px] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+        <div class="max-w-md w-full bg-slate-900 border-2 border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative z-10 text-center">
+            
+            <div class="relative w-20 h-20 mx-auto mb-5 flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border-4 border-dashed border-amber-500/40 animate-spin" style="animation-duration: 12s;"></div>
+                <div class="absolute inset-2 rounded-full border-2 border-dashed border-sky-500/40 animate-[spin_6s_linear_infinite_reverse]"></div>
+                <div class="absolute inset-4 rounded-full bg-slate-950 flex items-center justify-center border-2 border-slate-800" id="install-disk-rotor">
+                    <i data-lucide="refresh-cw" class="w-6 h-6 text-amber-400 animate-spin" style="animation-duration: 3s;"></i>
+                </div>
+                <span class="absolute top-1 right-1 flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" id="install-beacon-wave"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500" id="install-beacon"></span>
+                </span>
+            </div>
+
+            <div class="flex flex-col gap-1 items-center justify-center">
+                <h2 class="text-lg md:text-xl font-black text-white space-grotesk tracking-tight">Free World Cup BD</h2>
+                <p class="text-[9px] font-mono text-slate-500">System Update Installer</p>
+            </div>
+            
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-950 border border-slate-800 rounded-full mt-3 text-[10px] text-amber-500 font-extrabold uppercase tracking-wider">
+                <span id="install-stage-indicator">Updating System Files</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" id="install-stage-dot"></span>
+            </div>
+
+            <p class="text-[11px] text-slate-400 leading-relaxed mt-3.5 max-w-sm mx-auto">
+                Please wait while the update finishes installing. Do not close or reload the window during this progression.
+            </p>
+
+            <div class="mt-5 bg-slate-950 border border-slate-800 rounded-2xl p-4 text-left">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Progress Tracker</span>
+                    <span class="text-xs font-black text-amber-400 monospace animate-pulse" id="install-percentage-text">0%</span>
+                </div>
+
+                <!-- Custom Progress Bar -->
+                <div class="w-full h-2 bg-slate-900 border border-slate-800 rounded-full overflow-hidden mb-4">
+                    <div id="install-progress-bar-fill" class="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-sky-450 rounded-full transition-all duration-100" style="width: 0%;"></div>
+                </div>
+
+                <!-- Installation Checklist -->
+                <div class="flex flex-col gap-2 font-mono text-[10px] text-slate-400">
+                    <div class="flex items-center justify-between border-b border-slate-900 pb-1.5">
+                        <span id="chk-1">1. Verifying Stream Signatures</span>
+                        <span id="chk-val-1">[Waiting]</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-slate-900 pb-1.5">
+                        <span id="chk-2">2. Fetching M3U IPTV Playlists</span>
+                        <span id="chk-val-2">[Waiting]</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-slate-900 pb-1.5">
+                        <span id="chk-3">3. Optimizing Buffer Latency</span>
+                        <span id="chk-val-3">[Waiting]</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span id="chk-4">4. Finalizing Application Shell</span>
+                        <span id="chk-val-4">[Waiting]</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal log text tickers -->
+            <div class="mt-4 py-2 px-3 bg-slate-950 rounded-xl border border-slate-850 text-left monospace h-10 overflow-hidden text-[9px] text-slate-400 leading-relaxed" id="terminal-ticker-logs">
+                [SYSTEM] Connected to client update servers ...
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Global State Objects
+        let channelsData = [];
+        let filteredChannels = [];
+        let favorites = JSON.parse(localStorage.getItem('live_channels_favorites') || '[]');
+        let selectedChannel = null;
+        let selectedGroup = 'all';
+        let searchQuery = '';
+        let hlsInstance = null;
+        
+        // Active Server
+        let activeServer = 'Singapore Premium (WiFi 10G Feed)';
+        
+        // Active Slide in Landing Page
+        let activeSlideIndex = 0;
+        
+        // Is Closed caption subtitles enabled
+        let ccActive = false;
+        let ccInterval = null;
+        
+        // Aspect ratios list
+        const aspectRatios = ['video-contain', 'video-cover', 'video-fill'];
+        let activeAspectIndex = 0;
+
+        // Custom static fallback stream channels for immediate local standalone preview!
+        const LOCAL_FALLBACK_CHANNELS = [
+            { id: '1', name: 'T Sports HD Live', logo: 'https://images.unsplash.com/photo-1540747737956-378724044453?w=80&fit=crop&q=60', url: 'https://raw.githubusercontent.com/abusaeeidx/T-Sports-Playlist-Auto-Update/main/ns_player.m3u', group: 'Sports', playlistSource: 'Built-in' },
+            { id: '2', name: 'GTV Gazi TV', logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', group: 'Sports', playlistSource: 'Built-in Stream 1' },
+            { id: '3', name: 'Somoy News TV', logo: 'https://images.unsplash.com/photo-1495020689067-958852a6565d?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/pts/playlist.m3u8', group: 'News', playlistSource: 'Built-in Stream 2' },
+            { id: '4', name: 'Jamuna TV HD', logo: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', group: 'News', playlistSource: 'Built-in Stream 3' },
+            { id: '5', name: 'Star Sports 1', logo: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/pts/playlist.m3u8', group: 'Sports', playlistSource: 'Special' },
+            { id: '6', name: 'Zee Bangla Live', logo: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', group: 'Other', playlistSource: 'Bangla Entertainment' },
+            { id: '7', name: 'Sony Ten 1', logo: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/pts/playlist.m3u8', group: 'Sports', playlistSource: 'Ten Sports' },
+            { id: '8', name: 'Cartoon Network', logo: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=80&fit=crop&q=60', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', group: 'Kids', playlistSource: 'Nick Cartoon Feed' }
+        ];
+
+        // Slide events
+        const FEATURED_SLIDES = [
+            {
+                id: 'ch-t20-wc',
+                sport: 'cricket',
+                title: 'ICC T20 World Cup - Live 4K',
+                opponent: 'Bangladesh vs India',
+                status: 'চলমান লাইভ (2nd Innings)',
+                score: 'BAN 158/4 (18.3 Ov) • IND 157/7 (20 Ov)',
+                ticker: 'বাংলাদেশ টাইগার্স এর দুর্দান্ত ব্যাটিং! জয়ের একদম শেষ প্রান্তে বাংলাদেশ।',
+                backdrop: 'from-sky-950 via-slate-900 to-indigo-950',
+                channelName: 'T Sports 4K Live',
+                channelId: 'tsports',
+                badge: 'টি-স্পোর্টস এক্সক্লুসিভ'
+            },
+            {
+                id: 'ch-fifa-wc',
+                sport: 'football',
+                title: 'FIFA World Cup Elite Stage',
+                opponent: 'Argentina vs Brazil',
+                status: 'লাইভ প্রথমার্ধ (22 mins)',
+                score: 'ARG 1 - 0 BRA',
+                ticker: 'লিওনেল মেসির চমৎকার গোল অ্যাসিস্টে আর্জেন্টিনা এগিয়ে! মারাকানা কাঁপছে!',
+                backdrop: 'from-emerald-950 via-slate-900 to-teal-950',
+                channelName: 'Sony Ten 1 HD Live',
+                channelId: 'sony_ten1',
+                badge: 'ফুটবল ম্যাচ ২'
+            },
+            {
+                id: 'ch-gtv-live',
+                sport: 'cricket',
+                title: 'দ্বিপাক্ষিক সিরিজ আন্তর্জাতিক',
+                opponent: 'Bangladesh vs Sri Lanka Live',
+                status: 'জয়ের টার্গেটে (Day 1)',
+                score: 'BAN 110/1 (32.0 Ov) • SRI LANKA',
+                ticker: 'ওপেনার তানজিদ হাসান এর দুর্দান্ত হাফ-সেঞ্চুরি ৮২ রান!',
+                backdrop: 'from-blue-950 via-slate-900 to-slate-950',
+                channelName: 'GTV (Gazi TV) Live',
+                channelId: 'gtv_live',
+                badge: 'বাংলাদেশ ভেন্যু আইপিটিভি'
+            },
+            {
+                id: 'ch-news-somoy',
+                sport: 'news',
+                title: 'সরাসরি দেশ-বিদেশের খবর',
+                opponent: 'Somoy TV Latest News Feed',
+                status: 'লাইভ সম্প্রচার',
+                score: 'Breaking: গুরুত্বপূর্ণ আপডেটসমূহ',
+                ticker: 'সারাদেশের সকল জেলা ও উপজেলার নিরপেক্ষ খবর সরাসরি স্টুডিও থেকে।',
+                backdrop: 'from-rose-950 via-slate-900 to-slate-950',
+                channelName: 'Somoy News Live',
+                channelId: 'somoy_news',
+                badge: 'টানা ২৪ ঘন্টা সংবাদ'
+            },
+            {
+                id: 'ch-movies-sg',
+                sport: 'special',
+                title: 'সুপার ব্লকবাস্টার সিনেমা',
+                opponent: 'Star Gold Action Specials',
+                status: 'লাইভ সিনেমা স্ক্রিন',
+                score: 'Movie: K.G.F Chapter 2 HD',
+                ticker: 'বিশ্ব ক্রিকেটের বিরতিতে আকর্ষণীয় সব সিনেমার এইচডি সম্প্রচার।',
+                backdrop: 'from-amber-950 via-slate-900 to-slate-950',
+                channelName: 'Star Gold Live BD',
+                channelId: 'star_gold',
+                badge: 'সিনেমা স্পেশাল'
+            }
+        ];
+
+        // CC translation lists
+        const TRANSLATED_SPORTS_CC = [
+            "ধারাভাষ্যকার: 'অসাধারণ এক স্পিন ডেলিভারি! সরাসরি বোল্ড হয়ে উইকেট হারালেন ব্যাটসম্যান!'",
+            "ধারাভাষ্যকার: 'দুর্দান্ত কাভার ড্রাইভ! চমৎকার ফিল্ডিং টপকে বল সীমানার বাইরে ৪ রান! 🏏'",
+            "ধারাভাষ্যকার: 'স্ট্রাইকার অত্যন্ত দ্রুত দৌড়াচ্ছেন, দ্বিতীয় রানের চেষ্টায় নিরাপদ ক্রিজ স্পর্শ!'",
+            "ধারাভাষ্যকার: 'কি অবিশ্বাস্য রোমাঞ্চকর ম্যাচ চলছে! সবার চোখ মাঠের মাঝখানে আটকে রয়েছে!'",
+            "ধারাভাষ্যকার: 'ডিফেন্স এড়িয়ে চমৎকার পাস বাড়িয়ে দিলেন স্ট্রাইকারকে... এবং দারুণ গোল! ⚽⚡'",
+            "ধারাভাষ্যকার: 'বোলারের এলবিডব্লিউ জোরালো আবেদন, আম্পায়ারের নট আউট সংকেত, রিভিউ নেওয়ার সিদ্ধান্ত!'"
+        ];
+
+        const TRANSLATED_NEWS_CC = [
+            "সংবাদ উপস্থাপক: 'প্রধানমন্ত্রী আজ নতুন শিল্প উন্নয়ন পরিকল্পনার খসড়া অনুমোদনের ঘোষণা দিয়েছেন...'",
+            "স্টুডিও প্রতিনিধি: 'ব্যস্ততম সড়কগুলোতে যানজট পরিস্থিতি নিয়ন্ত্রণে বিশেষ ট্রাফিক পুলিশ মোতায়েন করা হয়েছে...'",
+            "আবহাওয়াবিদ: 'নিম্নচাপের জেরে উপকূলীয় এলাকায় দুর্যোগপূর্ণ আবহাওয়ায় কড়া লাল সতর্কতা জারি...⛈️'",
+            "অর্থনৈতিক বিশ্লেষক: 'আজকের জাতীয় সংসদে অর্থনৈতিক উন্নয়নের বাজেট প্রস্তাব পেশ করা হয়েছে...'"
+        ];
+
+        // Real-time Simulative global comments directory
+        const SIMULATED_LIVE_COMMENTS = [
+            { name: "Sajid Hasan", msg: "গোলললল! কি চমৎকার ফিনিশিং ছিল! আর্জেন্টিনা দারুণ খেলছে 🔥", badge: "VIP Donor", avatar: "SH", color: "from-sky-500 to-sky-600" },
+            { name: "Nayeem Uddin", msg: "বাংলাদেশ দলের বোলিং পারফরম্যান্স সত্যিই প্রশংসনীয় 🇧🇩 টাইগার্স একাদশ কাপ আজ নিবেই ইনশাআল্লাহ।", badge: "Premium Tier", avatar: "NU", color: "from-emerald-505 to-emerald-600" },
+            { name: "Fatima Khan", msg: "টি-স্পোর্টস এ এইচডি স্ট্রিম একেবারেই বাফারিং হচ্ছে না, অসাধারণ স্পিড!", badge: "Fanatic Level", avatar: "FK", color: "from-rose-500 to-rose-600" },
+            { name: "Arif Chowdhury", msg: "T T20 World Cup এর খেলা কি গাজি টিভিতেও সরাসরি দিচ্ছে?", badge: "Guest Client", avatar: "AC", color: "from-purple-500 to-purple-600" },
+            { name: "Sumit Dey", msg: "Gtv live link properly running smooth in my device. Love this portal so much!", badge: "Owner Moderator", avatar: "SD", color: "from-amber-500 to-amber-600" }
+        ];
+
+        // Standard dynamic loading block
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initializeBrandingDetails();
+            renderCarouselSlide();
+            fetchLatestChannelsDataSet();
+            startCommentsSimulator();
+        });
+
+        // Initialize user configured branding
+        function initializeBrandingDetails() {
+            const siteEn = localStorage.getItem('site_name_english') || 'Free World Cup BD';
+            const siteBn = localStorage.getItem('site_name_bangla') || 'বিডি লাইভ টিভি';
+            const marqueeText = localStorage.getItem('site_marquee_text') || 'স্বাগতম Free World Cup BD-তে! 📺 সম্পুর্ণ ফ্রিতে স্পোর্টস প্লেয়ারে উপভোগ করুন প্রিয় সব লাইভ স্পোর্টস, ঘরোয়া ও আন্তর্জাতিক খেলাধুলা এবং বিনোদন চ্যানেল। কোনো চ্যানেল সাময়িকভাবে বন্ধ থাকলে রিফ্রেশ বাটনে ক্লিক করুন অথবা প্লেয়ারে অন্য লিংক অপশন সিলেক্ট করুন।';
+            
+            document.getElementById('brand-en-text-header').innerText = siteEn;
+            document.getElementById('brand-en-text-disc').innerText = siteEn.toUpperCase();
+            document.getElementById('brand-bn-text-disc').innerText = siteBn;
+            document.getElementById('hero-brand-en-text').innerText = siteEn + " Live TV";
+            document.getElementById('app-header-title').innerText = siteEn;
+            document.getElementById('marquee-stream-text').innerText = marqueeText;
+        }
+
+        // --- PAGE SLIDING NAVIGATION LOGIC ---
+        function switchToApp() {
+            document.getElementById('page-landing').classList.add('hidden');
+            document.getElementById('page-app').classList.remove('hidden');
+            
+            // Auto-trigger video loading on first entry if we have channels
+            if (channelsData.length > 0 && !selectedChannel) {
+                selectChannelItem(channelsData[0].id);
+            }
+        }
+
+        function switchToLanding() {
+            document.getElementById('page-app').classList.add('hidden');
+            document.getElementById('page-landing').classList.remove('hidden');
+            pauseStreamVideo();
+        }
+
+        // --- SPORTS BROADCAST CAROUSEL CARD RENDERER ---
+        function renderCarouselSlide() {
+            const track = document.getElementById('carousel-slides-track');
+            const indicators = document.getElementById('carousel-indicators');
+            const slide = FEATURED_SLIDES[activeSlideIndex];
+
+            // Render Slide layout with neon simulation borders
+            let statusMarkup = `
+                <span class="flex items-center gap-1 text-[10px] font-sans font-extrabold text-rose-450 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                    ${slide.status}
+                </span>`;
+
+            let displayScreen = '';
+            // Render beautiful interactive animated mockup canvas based on sports
+            if (slide.sport === 'cricket') {
+                displayScreen = `
+                    <div class="relative w-full max-w-sm md:w-80 h-48 rounded-2xl bg-neutral-950 border-[4px] border-slate-800 shadow-2xl overflow-hidden group select-none">
+                        <div class="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20"></div>
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.04),rgba(0,255,0,0.01),rgba(0,0,255,0.04))] bg-[size:100%_4px,6px_100%] pointer-events-none z-20"></div>
+                        <!-- Neon Borders -->
+                        <div class="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-sky-400 z-30 animate-pulse"></div>
+                        
+                        <div class="absolute inset-0 bg-gradient-to-b from-emerald-950 via-teal-950 to-slate-950 flex flex-col justify-between p-3 overflow-hidden">
+                            <div class="flex justify-between items-start z-10">
+                                <span class="text-[10px] font-sans font-bold bg-amber-500 text-slate-950 px-2 py-0.5 rounded shadow">BAN VS IND</span>
+                                <span class="text-[9px] font-sans text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">● LIVE 4K</span>
+                            </div>
+                            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-end gap-10 hover:scale-105 transition-transform">
+                                <div class="flex gap-0.5 items-end h-8">
+                                    <div class="w-0.5 h-7 bg-amber-200"></div>
+                                    <div class="w-0.5 h-7 bg-amber-200"></div>
+                                    <div class="w-0.5 h-7 bg-amber-200"></div>
+                                </div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-md animate-ping"></div>
+                                <div class="origin-bottom rotate-[-20deg] w-1 h-9 bg-amber-600 rounded"></div>
+                            </div>
+                            <div class="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1 z-10 flex items-center justify-between">
+                                <span class="text-[10px] monospace text-emerald-400 font-bold">BAN 158/4 (18.3)</span>
+                                <span class="text-[9px] monospace text-slate-400">CRR: 8.54</span>
+                            </div>
+                        </div>
+                    </div>`;
+            } else if (slide.sport === 'football') {
+                displayScreen = `
+                    <div class="relative w-full max-w-sm md:w-80 h-48 rounded-2xl bg-neutral-950 border-[4px] border-slate-800 shadow-2xl overflow-hidden group select-none">
+                        <div class="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20"></div>
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.04),rgba(0,255,0,0.01),rgba(0,0,255,0.04))] bg-[size:100%_4px,6px_100%] pointer-events-none z-20"></div>
+                        <!-- Neon Borders -->
+                        <div class="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-sky-400 z-30 animate-pulse"></div>
+
+                        <div class="absolute inset-0 bg-gradient-to-b from-emerald-950 via-green-950 to-neutral-950 flex flex-col justify-between p-3 overflow-hidden">
+                            <div class="flex justify-between items-start z-10">
+                                <span class="text-[10px] font-sans font-bold bg-sky-500 text-white px-2 py-0.5 rounded shadow">ARG VS BRA</span>
+                                <span class="text-[9px] font-sans text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">● LIVE FIFA</span>
+                            </div>
+                            <div class="w-32 h-14 border border-b-0 border-white/40 mx-auto rounded-t relative flex items-center justify-center bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:5px_5px]">
+                                <span class="text-xl animate-bounce">⚽</span>
+                            </div>
+                            <div class="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1 z-10 flex items-center justify-between">
+                                <span class="text-[10px] monospace text-emerald-450 font-bold">ARG 1 - 0 BRA</span>
+                                <span class="text-[9px] monospace text-slate-400">22' (PR)</span>
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                displayScreen = `
+                    <div class="relative w-full max-w-sm md:w-80 h-48 rounded-2xl bg-neutral-950 border-[4px] border-slate-800 shadow-2xl overflow-hidden group select-none">
+                        <div class="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20"></div>
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.04),rgba(0,255,0,0.01),rgba(0,0,255,0.04))] bg-[size:100%_4px,6px_100%] pointer-events-none z-20"></div>
+                        <!-- Neon Borders -->
+                        <div class="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-sky-400 z-30 animate-pulse"></div>
+                        <div class="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-sky-400 z-30 animate-pulse"></div>
+
+                        <div class="absolute inset-0 bg-gradient-to-b from-rose-950 via-slate-950 to-neutral-950 flex flex-col justify-between p-3 overflow-hidden">
+                            <div class="flex justify-between items-start z-10">
+                                <span class="text-[10px] font-sans font-bold bg-rose-600 text-white px-2 py-0.5 rounded shadow">BREAKING NEWS</span>
+                                <span class="text-[9px] font-sans text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 uppercase tracking-widest animate-pulse">● SOMOY LIVE</span>
+                            </div>
+                            <div class="text-center font-bold text-[13px] text-white">সময় টিভি লাইভ সংবাদ</div>
+                            <div class="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1 z-10 flex items-center justify-between">
+                                <span class="text-[10px] monospace text-amber-450 font-bold">লাইভ হেডলাইনস</span>
+                                <span class="text-[9px] monospace text-slate-400">রানিং ২৪ঘন্টা</span>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            track.innerHTML = `
+                <div class="bg-gradient-to-r ${slide.backdrop} p-6 md:p-8 flex flex-col md:flex-row gap-6 md:items-center justify-between min-h-[220px] md:min-h-[260px] relative">
+                    <div class="absolute inset-0 bg-radial-gradient from-transparent to-slate-950/80 pointer-events-none"></div>
+                    <div class="absolute left-1/2 top-0 bottom-0 border-l border-white/5 border-dashed hidden md:block"></div>
+
+                    <!-- Metadata Left -->
+                    <div class="flex-grow z-10 flex flex-col justify-between max-w-lg">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[9px] md:text-[10px] font-sans font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded uppercase tracking-wider">${slide.badge}</span>
+                                ${statusMarkup}
+                            </div>
+                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-wide">${slide.title}</h4>
+                            <h5 class="text-xl md:text-2xl font-black text-white space-grotesk tracking-tight mt-1 mb-2">${slide.opponent}</h5>
+                        </div>
+
+                        <div class="bg-slate-950/70 backdrop-blur-md rounded-xl p-3 border border-slate-850/80 shadow-inner mt-2">
+                            <p class="text-amber-400 monospace text-sm font-black tracking-tight flex items-center gap-1.5">
+                                <i data-lucide="activity" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
+                                <span>${slide.score}</span>
+                            </p>
+                            <p class="text-[11px] text-slate-300 font-medium mt-1">📢 ${slide.ticker}</p>
+                        </div>
+                    </div>
+
+                    <!-- Simulated Visual Screen -->
+                    <div class="z-10 flex flex-col items-center justify-center shrink-0 w-full md:w-auto">
+                        ${displayScreen}
+                        <button onclick="switchToApp()" class="mt-3 w-full px-5 py-2.5 bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-lg cursor-pointer transform active:scale-95 transition-all text-center flex items-center justify-center gap-1.5">
+                            <span>সরাসরি প্লেয়ারে দেখতে ক্লিক করুন</span>
+                            <span>&rarr;</span>
+                        </button>
+                    </div>
+                </div>`;
+
+            // Render carousel indicators
+            let dots = '';
+            FEATURED_SLIDES.forEach((_, sIdx) => {
+                dots += `
+                    <button onclick="setActiveSlide(${sIdx})" class="h-2 rounded-full cursor-pointer transition-all ${sIdx === activeSlideIndex ? 'w-6 bg-sky-500' : 'w-2 bg-slate-800 hover:bg-slate-700'}"></button>
+                `;
+            });
+            indicators.innerHTML = dots;
+            lucide.createIcons();
+        }
+
+        function changeSlide(direction) {
+            activeSlideIndex = (activeSlideIndex + direction + FEATURED_SLIDES.length) % FEATURED_SLIDES.length;
+            renderCarouselSlide();
+        }
+
+        function setActiveSlide(index) {
+            activeSlideIndex = index;
+            renderCarouselSlide();
+        }
+
+        // Set up infinite interval rotation
+        setInterval(() => {
+            changeSlide(1);
+        }, 6500);
+
+        // --- CORE CHANNELS API DATA PROCESSING ENGINE ---
+        function fetchLatestChannelsDataSet() {
+            document.getElementById('loader-fallback-block').classList.remove('hidden');
+            document.getElementById('error-fallback-block').classList.add('hidden');
+            document.getElementById('channel-cards-grid').innerHTML = '';
+
+            // 1. Double route fetch strategy to run inside local standalone (CORS restriction safe) and container proxy:
+            fetch('/api/channels')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && Array.isArray(data.channels) && data.channels.length > 0) {
+                        channelsData = data.channels;
+                    } else {
+                        channelsData = LOCAL_FALLBACK_CHANNELS;
+                    }
+                    preprocessAndRenderChannels();
+                })
+                .catch(err => {
+                    console.warn("Server API direct fetch skipped, loading built-in local fallback streams...", err);
+                    channelsData = LOCAL_FALLBACK_CHANNELS;
+                    preprocessAndRenderChannels();
+                });
+        }
+
+        function preprocessAndRenderChannels() {
+            document.getElementById('loader-fallback-block').classList.add('hidden');
+            
+            // Calculate and display stats category indicators
+            updateCategoryCounts();
+            
+            // Filter and render
+            filterChannelsPool();
+        }
+
+        function updateCategoryCounts() {
+            const counts = { all: channelsData.length, favorites: favorites.length, Sports: 0, Bangla: 0, News: 0, Music: 0, Movies: 0, Kids: 0 };
+            
+            channelsData.forEach(c => {
+                if (counts[c.group] !== undefined) {
+                    counts[c.group]++;
+                }
+            });
+
+            // Update DOM counters
+            for (let [catId, num] of Object.entries(counts)) {
+                const badge = document.getElementById(`count-${catId}`);
+                if (badge) badge.innerText = num;
+            }
+        }
+
+        // Filter search & categories
+        function filterChannelsPool() {
+            const grid = document.getElementById('channel-cards-grid');
+            grid.innerHTML = '';
+
+            filteredChannels = channelsData.filter(ch => {
+                // Category match
+                if (selectedGroup === 'favorites') {
+                    if (!favorites.includes(ch.id)) return false;
+                } else if (selectedGroup !== 'all' && ch.group !== selectedGroup) {
+                    return false;
+                }
+
+                // Search query match
+                if (searchQuery.trim() !== '') {
+                    const phrase = searchQuery.toLowerCase().trim();
+                    const matchesName = ch.name.toLowerCase().includes(phrase);
+                    const matchesGrp = ch.group.toLowerCase().includes(phrase);
+                    return matchesName || matchesGrp;
+                }
+
+                return true;
+            });
+
+            // Set counted total
+            document.getElementById('filtered-channels-count').innerText = `মোট ফিল্টার্ড: ${filteredChannels.length}টি`;
+
+            if (filteredChannels.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-14 text-center text-slate-500">
+                        <div class="text-3xl mb-3">🔍</div>
+                        <h3 class="text-sm font-semibold text-slate-300">কোনো চ্যানেল পাওয়া যায়নি</h3>
+                        <p class="text-2xs text-slate-500 mt-1 max-w-xs mx-auto">অনুগ্রহ করে ভিন্ন কোনো নাম লিখুন অথবা ফিল্টার রিসেট করুন।</p>
+                    </div>`;
+                return;
+            }
+
+            // Render Cards
+            let cardsMarkup = '';
+            filteredChannels.forEach(ch => {
+                const favClass = favorites.includes(ch.id) ? 'text-amber-400 fill-amber-400' : 'text-slate-500 hover:text-white';
+                const isSelected = selectedChannel && selectedChannel.id === ch.id;
+                const borderClass = isSelected ? 'border-sky-500 bg-sky-500/10 scale-[0.98]' : 'border-slate-850 hover:border-slate-800 bg-slate-900 shadow-sm';
+                
+                cardsMarkup += `
+                    <div onclick="selectChannelItem('${ch.id}')" class="rounded-xl border p-2 flex flex-col items-center text-center cursor-pointer transition-all duration-150 select-none hover:scale-[1.01] ${borderClass}">
+                        <div class="relative w-12 h-12 md:w-14 md:h-14 rounded-lg bg-slate-950 flex items-center justify-center p-1 border border-slate-800 overflow-hidden mb-2">
+                            <span class="absolute inset-0 bg-gradient-to-tr from-sky-950/50 to-indigo-950/50 opacity-40"></span>
+                            <img src="${ch.logo}" alt="${ch.name}" class="w-full h-full object-contain relative z-10" onerror="this.src='https://images.unsplash.com/photo-1540747737956-378724044453?w=80&fit=crop&q=60'">
+                        </div>
+                        <span class="text-[10px] md:text-xs font-bold text-slate-200 tracking-tight line-clamp-1 w-full">${ch.name}</span>
+                        <div class="flex items-center justify-between w-full mt-1.5 px-1.5">
+                            <span class="text-[8px] bg-slate-950 border border-slate-850 px-1 py-0.2 rounded font-sans text-slate-400">${ch.group}</span>
+                            <button onclick="toggleFavoriteItem(event, '${ch.id}')" class="p-1 hover:bg-slate-850 rounded text-amber-500">
+                                <i data-lucide="heart" class="w-3.5 h-3.5 ${favClass}"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            });
+            grid.innerHTML = cardsMarkup;
+            lucide.createIcons();
+        }
+
+        // Change Selection Group
+        function selectCategory(catId) {
+            selectedGroup = catId;
+            
+            // Loop buttons classes
+            const scrollTrack = document.getElementById('category-pills-row');
+            const btns = scrollTrack.querySelectorAll('button');
+            btns.forEach(btn => {
+                if (btn.id === `cat-btn-${catId}`) {
+                    btn.className = "flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-sky-600 text-white border-sky-500 shadow-lg shadow-sky-950/40";
+                } else {
+                    btn.className = "flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 border bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200";
+                }
+            });
+
+            filterChannelsPool();
+        }
+
+        // Search text dispatch
+        function handleSearchInputChange(val) {
+            searchQuery = val;
+            filterChannelsPool();
+        }
+
+        // SELECT INDIVIDUAL STREAM CHANNEL
+        function selectChannelItem(chId) {
+            const found = channelsData.find(c => c.id === chId);
+            if (!found) return;
+
+            selectedChannel = found;
+            
+            // Update active item styles in cards list
+            filterChannelsPool();
+
+            // Update info displays
+            document.getElementById('selected-channel-name-title').innerText = selectedChannel.name;
+            document.getElementById('selected-channel-group-tag').innerText = selectedChannel.group + " IPTV";
+            document.getElementById('selected-channel-desc').innerText = `খাড়া ৪কে সিগন্যালে জিরো বাফারিং এ সম্প্রচারিত হচ্ছে জনপ্রিয় ${selectedChannel.name} লাইভ খেলাধুলা এবং বিনোদন এন্টারটেইনমেন্ট ফিড।`;
+
+            // Update favorite panel button fill status
+            const currentStar = document.getElementById('btn-favorite-current-channel').querySelector('i');
+            if (favorites.includes(selectedChannel.id)) {
+                currentStar.classList.add('fill-amber-500', 'text-amber-500');
+            } else {
+                currentStar.classList.remove('fill-amber-500', 'text-amber-500');
+            }
+
+            // Load Hls video source dynamically
+            loadVideoSrcURL(selectedChannel.url);
+        }
+
+        // Handle Playback load of Hls
+        function loadVideoSrcURL(url) {
+            const video = document.getElementById('hls-native-embed-video');
+            const loader = document.getElementById('video-player-loader');
+            const errBox = document.getElementById('video-player-error');
+
+            loader.classList.remove('hidden');
+            errBox.classList.add('hidden');
+
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+
+            // Standard CORS protection safety proxy redirection path
+            let streamUrl = url;
+            if (window.location.protocol.startsWith('http') && !url.includes('test-streams.mux.dev') && !url.includes('raw.githubusercontent.com')) {
+                // Proxy routing configuration
+                streamUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+            }
+
+            if (Hls.isSupported()) {
+                hlsInstance = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+                hlsInstance.loadSource(streamUrl);
+                hlsInstance.attachMedia(video);
+
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play()
+                        .then(() => {
+                            loader.classList.add('hidden');
+                            document.getElementById('btn-play-pause').innerHTML = `<i data-lucide="pause" class="w-4 h-4"></i>`;
+                            lucide.createIcons();
+                        })
+                        .catch(() => {
+                            loader.classList.add('hidden');
+                        });
+                });
+
+                hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                hlsInstance.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hlsInstance.recoverMediaError();
+                                break;
+                            default:
+                                loader.classList.add('hidden');
+                                errBox.classList.remove('hidden');
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // For native iOS safari
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', () => {
+                    video.play()
+                        .then(() => {
+                            loader.classList.add('hidden');
+                        })
+                        .catch(() => {
+                            loader.classList.add('hidden');
+                        });
+                });
+                video.addEventListener('error', () => {
+                    loader.classList.add('hidden');
+                    errBox.classList.remove('hidden');
+                });
+            } else {
+                loader.classList.add('hidden');
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        function retryCurrentChannel() {
+            if (selectedChannel) {
+                loadVideoSrcURL(selectedChannel.url);
+            }
+        }
+
+        function pauseStreamVideo() {
+            const video = document.getElementById('hls-native-embed-video');
+            video.pause();
+        }
+
+        // --- CUSTOM CONTROLLER COMMAND INTERFACES ---
+        function togglePlayState() {
+            const video = document.getElementById('hls-native-embed-video');
+            const playPauseBtn = document.getElementById('btn-play-pause');
+
+            if (video.paused) {
+                video.play();
+                playPauseBtn.innerHTML = `<i data-lucide="pause" class="w-4 h-4"></i>`;
+            } else {
+                video.pause();
+                playPauseBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i>`;
+            }
+            lucide.createIcons();
+        }
+
+        function toggleMuteState() {
+            const video = document.getElementById('hls-native-embed-video');
+            const volMuteBtn = document.getElementById('btn-volume-mute');
+
+            if (video.muted) {
+                video.muted = false;
+                volMuteBtn.innerHTML = `<i data-lucide="volume-2" class="w-4 h-4"></i>`;
+            } else {
+                video.muted = true;
+                volMuteBtn.innerHTML = `<i data-lucide="volume-x" class="w-4 h-4"></i>`;
+            }
+            lucide.createIcons();
+        }
+
+        function changeVolumeSlider(val) {
+            const video = document.getElementById('hls-native-embed-video');
+            video.volume = val / 100;
+            video.muted = false;
+        }
+
+        function cycleAspectRatio() {
+            const video = document.getElementById('hls-native-embed-video');
+            activeAspectIndex = (activeAspectIndex + 1) % aspectRatios.length;
+            const chosen = aspectRatios[activeAspectIndex];
+
+            // Remove previous
+            video.className = "w-full h-full";
+            video.classList.add(chosen);
+
+            // Update Label
+            const label = chosen.replace('video-', '');
+            document.getElementById('aspect-ratio-label').innerText = label.toUpperCase();
+        }
+
+        function toggleQualityDropdown() {
+            const drop = document.getElementById('quality-dropdown-menu');
+            drop.classList.toggle('hidden');
+        }
+
+        function selectQualityOption(val) {
+            document.getElementById('quality-active-label').innerText = val;
+            document.getElementById('quality-dropdown-menu').classList.add('hidden');
+            
+            // Dynamic buffering reload simulation
+            const loader = document.getElementById('video-player-loader');
+            loader.classList.remove('hidden');
+            setTimeout(() => {
+                loader.classList.add('hidden');
+            }, 800);
+        }
+
+        function toggleLandscapeRotation() {
+            const frame = document.getElementById('video-frame-disc');
+            frame.classList.toggle('rotate-90');
+        }
+
+        function triggerMaximizeVideo() {
+            const video = document.getElementById('hls-native-embed-video');
+            if (video.requestFullscreen) video.requestFullscreen();
+            else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+            else if (video.msRequestFullscreen) video.msRequestFullscreen();
+        }
+
+        // CC SUBTITLES SIMULATION ENGINE
+        function toggleCcState() {
+            const activeIndicator = document.getElementById('cc-active-indicator');
+            const box = document.getElementById('video-player-cc-box');
+
+            ccActive = !ccActive;
+            if (ccActive) {
+                activeIndicator.classList.remove('hidden');
+                box.classList.remove('hidden');
+                runCCSubtitleTicks();
+            } else {
+                activeIndicator.classList.add('hidden');
+                box.classList.add('hidden');
+                clearInterval(ccInterval);
+            }
+        }
+
+        function runCCSubtitleTicks() {
+            const textEl = document.getElementById('cc-text-display');
+            
+            const renderRandSubtitle = () => {
+                if (!selectedChannel) return;
+                const isSportsObj = selectedChannel.group.toLowerCase().includes('sport') || selectedChannel.name.toLowerCase().includes('sport') || selectedChannel.name.toLowerCase().includes('gazi') || selectedChannel.name.toLowerCase().includes('ten');
+                const list = isSportsObj ? TRANSLATED_SPORTS_CC : TRANSLATED_NEWS_CC;
+                const rand = list[Math.floor(Math.random() * list.length)];
+                textEl.innerText = rand;
+            };
+
+            renderRandSubtitle();
+            ccInterval = setInterval(renderRandSubtitle, 4800);
+        }
+
+        // --- CHANNELS FAVORITES PERSISTENCE ---
+        function toggleFavoriteItem(e, id) {
+            e.stopPropagation();
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(fId => fId !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('live_channels_favorites', JSON.stringify(favorites));
+            preprocessAndRenderChannels();
+        }
+
+        function toggleFavoriteCurrentChannel() {
+            if (!selectedChannel) return;
+            const id = selectedChannel.id;
+            const currentStar = document.getElementById('btn-favorite-current-channel').querySelector('i');
+
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(fId => fId !== id);
+                currentStar.classList.remove('fill-amber-500', 'text-amber-500');
+            } else {
+                favorites.push(id);
+                currentStar.classList.add('fill-amber-500', 'text-amber-500');
+            }
+            localStorage.setItem('live_channels_favorites', JSON.stringify(favorites));
+            updateCategoryCounts();
+        }
+
+        // --- REALTIME LIVE CHAT ROOM PANEL ENGINE ---
+        function toggleChatPanel() {
+            const panel = document.getElementById('app-chat-panel');
+            const btn = document.getElementById('btn-toggle-chat');
+            const text = document.getElementById('chat-toggle-text');
+
+            panel.classList.toggle('hidden');
+            if (panel.classList.contains('hidden')) {
+                btn.className = "w-full py-2.5 rounded-xl border border-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow bg-gradient-to-r from-sky-600 to-indigo-650 hover:from-sky-500 hover:to-indigo-500 text-white";
+                text.innerText = "লাইভ চ্যাট রুম ওপেন করুন (Open Chat)";
+            } else {
+                btn.className = "w-full py-2.5 rounded-xl border border-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow bg-rose-500/10 text-rose-450 hover:bg-rose-500/15";
+                text.innerText = "লাইভ চ্যাট ক্লোজ করুন (Collapse Chat)";
+            }
+            scrollChatToBottom();
+        }
+
+        function scrollChatToBottom() {
+            const el = document.getElementById('chat-messages-scroll-well');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function handleSendChatMessage(e) {
+            e.preventDefault();
+            const inp = document.getElementById('chat-input-element');
+            const txt = inp.value.trim();
+            if (txt === '') return;
+
+            // Append User Chat
+            appendMessageToChatBox("You", txt, "Sender Guest", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&fit=crop&q=80", "from-sky-400 to-sky-550");
+            inp.value = '';
+
+            // Simulate quick auto reply in 1.5s
+            setTimeout(() => {
+                const replies = [
+                    "হ্যাঁ ভাই সহমত পোষণ করলাম!",
+                    "ভাই এই প্লেয়ারের স্পিড আসলেই প্রশংসনীয়।",
+                    "উইকেট পড়লে কার কার আনন্দ হয় বলুন? 🏏",
+                    "বাংলাদেশ টাইগার্সের জয় নিশ্চিত আজকে!",
+                    "T-Sports Link is running perfectly. Thank you admin of Free World Cup BD!"
+                ];
+                const rText = replies[Math.floor(Math.random() * replies.length)];
+                appendMessageToChatBox("Viewer Bot Rep", rText, "Active Member", "", "from-purple-500 to-purple-600");
+            }, 1800);
+        }
+
+        function appendMessageToChatBox(user, msg, badge, avatarUrl, avatarGrad) {
+            const well = document.getElementById('chat-messages-scroll-well');
+            
+            let avMarkup =`<div class="w-7 h-7 rounded-full bg-gradient-to-tr ${avatarGrad} flex items-center justify-center font-bold text-[10px] text-white shrink-0">${user.substring(0,2).toUpperCase()}</div>`;
+            if (avatarUrl) {
+                avMarkup = `<img src="${avatarUrl}" alt="Avatar" class="w-7 h-7 rounded-full object-cover shrink-0">`;
+            }
+
+            const item = document.createElement('div');
+            item.className = "flex gap-2.5 items-start p-1.5 rounded-lg hover:bg-slate-950/20";
+            item.innerHTML = `
+                ${avMarkup}
+                <div class="flex-grow flex flex-col">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-200">${user}</span>
+                        <span class="text-[8px] font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/15 px-1 py-0.2 rounded">${badge}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-350 leading-relaxed mt-0.5">${msg}</p>
+                </div>`;
+            well.appendChild(item);
+            scrollChatToBottom();
+        }
+
+        function startCommentsSimulator() {
+            // Seed initial
+            SIMULATED_LIVE_COMMENTS.forEach(c => {
+                appendMessageToChatBox(c.name, c.msg, c.badge, "", c.color);
+            });
+
+            // Loop interval
+            setInterval(() => {
+                const clients = ["Masud Rana", "Shovon Kabir", "Tariqul Islam", "Priti Mondal", "Ayman Rahman"];
+                const msgs = [
+                    "Sony Ten stream is very stable with WiFi here, zero loading delays!",
+                    "টি স্পোর্টস লাইভে খেলা কত ওভারে চলছে এখন কেউ বলবেন প্লিজ?",
+                    "আর্জেন্টিনা ব্রাজিল এর হাইলাইটস কি এই পোর্টালে এড করা হবে ভাই?",
+                    "অসাধারণ স্পোর্টস ড্যাশবোর্ড! চিজ বাফারিং নেই একদম।",
+                    "Somoy sports updates always on top!"
+                ];
+                const rC = SIMULATED_LIVE_COMMENTS[Math.floor(Math.random() * SIMULATED_LIVE_COMMENTS.length)];
+                const nU = clients[Math.floor(Math.random() * clients.length)];
+                const nM = msgs[Math.floor(Math.random() * msgs.length)];
+                appendMessageToChatBox(nU, nM, rC.badge, "", rC.color);
+            }, 6400);
+        }
+
+        // --- HIGH RESOLUTION NETWORK SERVER CHANGER ---
+        function selectServer(name, btn) {
+            const textRotorPill = document.getElementById('server-active-pill');
+            textRotorPill.innerText = "Connecting...";
+            textRotorPill.className = "text-[9px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse";
+            
+            const list = document.getElementById('server-selection-pills-container');
+            const btns = list.querySelectorAll('button');
+            btns.forEach(b => {
+                b.className = "shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 bg-slate-950 hover:bg-slate-900 border-slate-800 min-w-[115px]";
+                // Set text descriptions down
+                b.querySelector('.leading-none span:last-child').className = "text-[8px] font-bold text-slate-500";
+                b.querySelector('.leading-none span:last-child').innerText = "Standby";
+            });
+
+            btn.className = "shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 bg-sky-500/10 border-sky-400 min-w-[115px]";
+            btn.querySelector('.leading-none span:last-child').className = "text-[8px] font-bold text-sky-450";
+            btn.querySelector('.leading-none span:last-child').innerText = "Active";
+
+            setTimeout(() => {
+                activeServer = name;
+                textRotorPill.innerText = "Sync Active 🌟";
+                textRotorPill.className = "text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20";
+                
+                // Emulate reload of stream
+                if (selectedChannel) {
+                    loadVideoSrcURL(selectedChannel.url);
+                }
+            }, 1200);
+        }
+
+        // --- APK UPDATE OTAC (OVER-THE-AIR CONFIG) EMULATOR ---
+        function triggerUpdateFlow() {
+            document.getElementById('update-checker-modal-element').classList.remove('hidden');
+            document.getElementById('update-progress-stage-block').classList.remove('hidden');
+            document.getElementById('update-details-stage-block').classList.add('hidden');
+            document.getElementById('installed-version-badge').innerText = "Current version installed: v1.0.0";
+            
+            // Spin scanning
+            document.getElementById('update-icon-rotor').classList.add('animate-spin');
+
+            setTimeout(() => {
+                document.getElementById('update-icon-rotor').classList.remove('animate-spin');
+                document.getElementById('update-progress-stage-block').classList.add('hidden');
+                document.getElementById('update-details-stage-block').classList.remove('hidden');
+            }, 1600);
+        }
+
+        function closeUpdateDialog() {
+            document.getElementById('update-checker-modal-element').classList.add('hidden');
+        }
+
+        // FULL SCREEN TAKEOVER LIVE APK UPDATE FLOW
+        function beginSystemInstallation() {
+            closeUpdateDialog();
+            document.getElementById('immersive-update-takeover').classList.remove('hidden');
+
+            let progress = 0;
+            const fill = document.getElementById('install-progress-bar-fill');
+            const pct = document.getElementById('install-percentage-text');
+            const dot = document.getElementById('install-stage-dot');
+            const lbl = document.getElementById('install-stage-indicator');
+            const terminalLogs = document.getElementById('terminal-ticker-logs');
+
+            const interval = setInterval(() => {
+                progress += 2;
+                fill.style.width = `${progress}%`;
+                pct.innerText = `${progress}%`;
+
+                if (progress >= 20 && progress < 50) {
+                    lbl.innerText = "Downloading IPTV Playlists config...";
+                    document.getElementById('chk-1').className = "text-emerald-400 font-bold";
+                    document.getElementById('chk-val-1').innerText = "[Done]";
+                    document.getElementById('chk-val-1').className = "text-emerald-400 font-mono font-bold";
+                    terminalLogs.innerText = "[CDN] Patching streaming signatures from global repo...";
+                } else if (progress >= 50 && progress < 80) {
+                    lbl.innerText = "Resolving video stream buffer decoders...";
+                    document.getElementById('chk-2').className = "text-emerald-400 font-bold";
+                    document.getElementById('chk-val-2').innerText = "[Done]";
+                    document.getElementById('chk-val-2').className = "text-emerald-400 font-mono font-bold";
+                    terminalLogs.innerText = "[M3U] Reading auto-updates playlists for sports ...";
+                } else if (progress >= 80 && progress < 100) {
+                    lbl.innerText = "Synchronizing favorite channels database...";
+                    document.getElementById('chk-3').className = "text-emerald-400 font-bold";
+                    document.getElementById('chk-val-3').innerText = "[Done]";
+                    document.getElementById('chk-val-3').className = "text-emerald-400 font-mono font-bold";
+                    terminalLogs.innerText = "[LATENCY] Allocating network bandwidth buffers...";
+                } else if (progress >= 100) {
+                    clearInterval(interval);
+                    lbl.innerText = "Installation finished! Rebooting system...";
+                    document.getElementById('chk-4').className = "text-emerald-400 font-bold";
+                    document.getElementById('chk-val-4').innerText = "[Ready]";
+                    document.getElementById('chk-val-4').className = "text-emerald-400 font-mono font-bold";
+                    
+                    document.getElementById('install-disk-rotor').querySelector('i').classList.remove('animate-spin');
+                    document.getElementById('install-disk-rotor').querySelector('i').className = "w-6 h-6 text-emerald-400";
+                    document.getElementById('install-disk-rotor').querySelector('i').setAttribute('data-lucide', 'check');
+                    dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
+                    terminalLogs.innerText = "[FINISHED] Version v1.1.0 configured. Initializing interface ...";
+                    localStorage.setItem('free_world_cup_app_version', "v1.1.0");
+
+                    lucide.createIcons();
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

@@ -10,7 +10,8 @@ export interface Channel {
   logo: string;
   group: string;
   playlistSource: string;
-  status: 'online' | 'offline' | 'unknown';
+  status?: 'online' | 'offline' | 'unknown';
+  isCustomAdded?: boolean;
   latency?: number;
 }
 

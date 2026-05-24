@@ -22,3 +22,30 @@
   background: rgba(148, 163, 184, 0.4);
 }
 
+/* GPU Accelerated Smooth Infinite Marquee Animations */
+@keyframes marquee-scroll {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes marquee-scroll-reverse {
+  0% { transform: translate3d(-50%, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.animate-marquee-fast {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll 115s linear infinite;
+}
+
+.animate-marquee-reverse-fast {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll-reverse 125s linear infinite;
+}
+
+.animate-marquee-fast:hover, .animate-marquee-reverse-fast:hover {
+  animation-play-state: paused;
+}
+
