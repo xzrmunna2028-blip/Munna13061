@@ -39,166 +39,197 @@ export function StatsDisplay() {
   }, []);                
 
   return (
-    <div className="grid grid-cols-3 gap-3 md:gap-4">
-      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center shadow-lg">
-        <span className="text-lg md:text-xl font-black text-white">{stats.totalRegistrations}</span>
-        <span className="text-[9px] text-slate-400 block uppercase tracking-wider mt-0.5">সব রেজিস্ট্রেশন</span>
+    <div className="grid grid-cols-3 gap-2.5 max-w-md mx-auto px-1">
+      <div className="bg-slate-900/60 border border-slate-800/80 backdrop-blur-md p-2 rounded-xl text-center shadow-lg">
+        <span className="text-base md:text-xl font-black text-emerald-450 block">{stats.totalRegistrations}</span>
+        <span className="text-[9px] text-slate-400 block uppercase tracking-wider mt-0.5 truncate">কালেকশন</span>
       </div>
-      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center shadow-lg">
-        <span className="text-lg md:text-xl font-black text-white">{stats.totalLogins}</span>
-        <span className="text-[9px] text-slate-400 block uppercase tracking-wider mt-0.5">সব লগইন</span>
+      <div className="bg-slate-900/60 border border-slate-800/80 backdrop-blur-md p-2 rounded-xl text-center shadow-lg">
+        <span className="text-base md:text-xl font-black text-teal-400 block">{stats.totalLogins}</span>
+         <span className="text-[9px] text-slate-400 block uppercase tracking-wider mt-0.5 truncate">লগইন</span>
       </div>
-      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center shadow-lg">
-        <span className="text-lg md:text-xl font-black text-emerald-400">{stats.activeUsers}</span>
-        <span className="text-[9px] text-slate-400 block uppercase tracking-wider mt-0.5">বর্তমানে লাইভ</span>
+      <div className="bg-slate-900/60 border border-slate-800/80 backdrop-blur-md p-2 rounded-xl text-center shadow-lg">
+        <span className="text-base md:text-xl font-black text-sky-400 block">{stats.activeUsers}</span>
+        <span className="text-[9px] text-slate-400 block uppercase tracking-wider mt-0.5 animate-pulse truncate select-none">অনলাইন</span>
       </div>
     </div>
-  )
+  );
 }
+
+export function FreeWorldCupBDLogo({ className = "w-32 h-32" }: { className?: string }) {
   const customLogoUrl = localStorage.getItem('site_logo_url') || '';
   const siteNameBangla = localStorage.getItem('site_name_bangla') || 'বিডি লাইভ টিভি';
-  const siteNameEnglish = localStorage.getItem('site_name_english') || 'BD LIVE TV';
+  const siteNameEnglish = localStorage.getItem('site_name_english') || 'Free World Cup BD';
 
-  return (
-    <div className={`relative flex items-center justify-center select-none ${className}`}>
-      {/* Outer Rotating Cyber Neon Rings */}
-      <div className="absolute inset-0 rounded-full border-4 border-dashed border-sky-504/40 animate-[spin_40s_linear_infinite]" />
-      <div className="absolute inset-1.5 rounded-full border-2 border-indigo-505/30 animate-[spin_20s_linear_infinite_reverse]" />
-      
-      {/* Glowing Backdrop */}
-      <div className="absolute inset-3 bg-gradient-to-tr from-sky-600/35 to-indigo-650/45 rounded-full blur-xl opacity-80" />
-      
-      {/* Main Logo Disc */}
-      {customLogoUrl ? (
+  if (customLogoUrl) {
+    return (
+      <div className={`relative flex items-center justify-center select-none ${className}`}>
         <img 
           src={customLogoUrl} 
           alt="Brand Logo" 
           referrerPolicy="no-referrer"
-          className="w-[85%] h-[85%] rounded-full object-cover relative z-10 border border-sky-400/50 shadow-lg shadow-sky-500/10"
+          className="w-[85%] h-[85%] rounded-full object-cover relative z-10 border border-emerald-400 shadow-lg shadow-emerald-500/20"
         />
-      ) : (
-        <svg viewBox="0 0 400 400" className="w-full h-full relative z-10 drop-shadow-[0_0_25px_rgba(14,165,233,0.5)]">
-          {/* Sky gradient background */}
-          <defs>
-            <radialGradient id="discGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#0284c7" />
-              <stop offset="45%" stopColor="#0369a1" />
-              <stop offset="85%" stopColor="#0f172a" />
-              <stop offset="100%" stopColor="#020617" />
-            </radialGradient>
-            <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="50%" stopColor="#e2e8f0" />
-              <stop offset="100%" stopColor="#38bdf8" />
-            </linearGradient>
-            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fef08a" />
-              <stop offset="50%" stopColor="#eab308" />
-              <stop offset="100%" stopColor="#ca8a04" />
-            </linearGradient>
-            <linearGradient id="flagRed" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="100%" stopColor="#b91c1c" />
-            </linearGradient>
-            <linearGradient id="flagGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#047857" />
-            </linearGradient>
-          </defs>
+      </div>
+    );
+  }
 
-          {/* Base Circle */}
-          <circle cx="200" cy="200" r="185" fill="url(#discGrad)" stroke="#38bdf8" strokeWidth="6" />
-          <circle cx="200" cy="200" r="176" fill="none" stroke="#6366f1" strokeWidth="2" opacity="0.6" />
+  return (
+    <div className={`relative flex items-center justify-center select-none ${className}`}>
+      {/* High-Fidelity SVG Replication of the User's Uploaded Logo */}
+      <svg viewBox="0 0 450 450" className="w-full h-full filter drop-shadow-2xl">
+        <defs>
+          <radialGradient id="stadiumGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#0d9488" stopOpacity="0.4" />
+            <stop offset="40%" stopColor="#020617" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#020617" stopOpacity="1" />
+          </radialGradient>
+          <linearGradient id="metalRing" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="35%" stopColor="#0ea5e9" />
+            <stop offset="70%" stopColor="#0284c7" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+          <linearGradient id="goldText" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+          <linearGradient id="redPill" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#b91c1c" />
+          </linearGradient>
+        </defs>
 
-          {/* Stadium Lights Beams */}
-          <path d="M 50 100 L 200 200 L 350 100" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3,3" opacity="0.3" />
-          <path d="M 100 50 L 200 200 L 300 50" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3,3" opacity="0.3" />
+        {/* Stadium Lights & outer glow background */}
+        <circle cx="225" cy="225" r="215" fill="url(#stadiumGlow)" />
+        <circle cx="225" cy="225" r="210" fill="none" stroke="url(#metalRing)" strokeWidth="6" strokeDasharray="1400" />
+        <circle cx="225" cy="225" r="202" fill="none" stroke="#1e293b" strokeWidth="2" />
+        
+        {/* Stadium Floodlights beams/dots on the sides */}
+        {/* Left floodlights */}
+        <g opacity="0.85" transform="translate(45, 120)">
+          <rect x="-10" y="-10" width="40" height="25" rx="5" fill="#1e293b" stroke="#38bdf8" strokeWidth="1" />
+          <circle cx="0" cy="0" r="3" fill="#fff" />
+          <circle cx="10" cy="0" r="3" fill="#fff" />
+          <circle cx="20" cy="0" r="3" fill="#fff" />
+          <circle cx="0" cy="8" r="3" fill="#fff" />
+          <circle cx="10" cy="8" r="3" fill="#fff" />
+          <circle cx="20" cy="8" r="3" fill="#fff" />
+        </g>
+        
+        {/* Right floodlights */}
+        <g opacity="0.85" transform="translate(365, 120)">
+          <rect x="-10" y="-10" width="40" height="25" rx="5" fill="#1e293b" stroke="#38bdf8" strokeWidth="1" />
+          <circle cx="0" cy="0" r="3" fill="#fff" />
+          <circle cx="10" cy="0" r="3" fill="#fff" />
+          <circle cx="20" cy="0" r="3" fill="#fff" />
+          <circle cx="0" cy="8" r="3" fill="#fff" />
+          <circle cx="10" cy="8" r="3" fill="#fff" />
+          <circle cx="20" cy="8" r="3" fill="#fff" />
+        </g>
 
-          {/* Map of Bangladesh inside disc on the Right */}
-          <path 
-            d="M 280 150 Q 310 130 330 150 T 350 180 T 330 220 T 340 260 T 310 280 T 290 250 T 280 200 Z" 
-            fill="url(#flagGreen)" 
-            opacity="0.35" 
-            stroke="#059669" 
-            strokeWidth="1.5"
-          />
-          {/* Red circle element on Bangladesh Map */}
-          <circle cx="315" cy="200" r="18" fill="url(#flagRed)" opacity="0.5" />
+        {/* Bangladesh Map and flag aesthetics in the top right quadrant */}
+        <path d="M 285,170 C 295,140 335,120 355,145 C 375,170 345,210 325,230 Z" fill="#15803d" opacity="0.30" />
+        <circle cx="325" cy="175" r="25" fill="#ef4444" opacity="0.45" />
 
-          {/* Bangladesh Flag graphic on Right Margin background */}
-          <g transform="translate(310, 80) scale(0.45)" opacity="0.9">
-            <rect x="0" y="0" width="100" height="60" rx="4" fill="#047857" stroke="#ffffff" strokeWidth="2" />
-            <circle cx="45" cy="30" r="18" fill="#e11d48" />
-          </g>
+        {/* Stadium turf radial grass paths inside the ring */}
+        <path d="M 85,320 L 365,320 C 345,390 285,410 225,410 C 165,410 105,390 85,320 Z" fill="#047857" opacity="0.25" />
 
-          {/* Cricket Batsman Silhouette Vector on Left */}
-          <g transform="translate(68, 120) scale(0.28)" opacity="0.85">
-            {/* Batsman outline with sky glow */}
-            <path d="M50 160 Q80 110 90 90 L110 50 L115 45 Q125 35 140 45 L155 60 L140 100 L110 160" stroke="#38bdf8" strokeWidth="12" fill="none" strokeLinecap="round" />
-            <line x1="115" y1="45" x2="200" y2="-10" stroke="url(#goldGrad)" strokeWidth="15" strokeLinecap="round" /> {/* Bat */}
-            <circle cx="95" cy="70" r="16" fill="#ffffff" />
-          </g>
+        {/* Dynamic Stadium Strikers (Cricket and Football vectors) */}
+        {/* Left Side: Cricket Batsman Silhouette */}
+        <g fill="#10b981" opacity="0.9" transform="translate(70, 220) scale(0.7)">
+          {/* Bat */}
+          <path d="M 20,-10 L 45,-65 C 47,-69 51,-68 53,-65 C 55,-62 54,-58 51,-55 L 28,0 Z" fill="#fbbf24" />
+          {/* Batsman body */}
+          <circle cx="5" cy="-70" r="12" />
+          <path d="M -5,-55 Q 10,-55 20,-45 L 25,-25 Q 5,-40 -10,-45 Q -25,-50 -20,-20 L -30,25" stroke="#10b981" strokeWidth="8" strokeLinecap="round" fill="none" />
+          <path d="M -5,-50 L 5,-15 L 15,35" stroke="#10b981" strokeWidth="8" strokeLinecap="round" fill="none" />
+        </g>
 
-          {/* Soccer Player Silhouette Vector on Right */}
-          <g transform="translate(205, 125) scale(0.26)" opacity="0.85">
-            <path d="M40 160 L60 90 L120 70 L140 100" stroke="#38bdf8" strokeWidth="12" fill="none" strokeLinecap="round" />
-            <path d="M60 90 L10 110 L5 125" stroke="#38bdf8" strokeWidth="10" fill="none" strokeLinecap="round" />
-            <circle cx="120" cy="50" r="16" fill="#ffffff" />
-            <circle cx="160" cy="115" r="12" fill="#ffffff" stroke="#000000" strokeWidth="2" /> {/* Football */}
-          </g>
+        {/* Right Side: Footballer Kicking a Ball Silhouette */}
+        <g fill="#0ea5e9" opacity="0.9" transform="translate(380, 220) scale(0.7) scale(-1, 1)">
+          <circle cx="5" cy="-70" r="12" />
+          {/* Body */}
+          <path d="M -10,-55 Q 10,-60 20,-40 L 45,-30 L 60,-5" stroke="#0ea5e9" strokeWidth="8" strokeLinecap="round" fill="none" />
+          {/* Legs */}
+          <path d="M 5,-45 L -15,-20 L -5,25" stroke="#0ea5e9" strokeWidth="8" strokeLinecap="round" fill="none" />
+          <path d="M 5,-45 L 15,-10 L 35,5" stroke="#0ea5e9" strokeWidth="8" strokeLinecap="round" fill="none" />
+          {/* Ball */}
+          <circle cx="65" cy="30" r="10" fill="#fff" />
+          <circle cx="65" cy="30" r="10" stroke="#0f172a" strokeWidth="2.5" fill="none" />
+        </g>
 
-          {/* Central Globe Outline */}
-          <circle cx="200" cy="280" r="48" fill="#1e293b" stroke="#0ea5e9" strokeWidth="2" opacity="0.8" />
-          <path d="M 152 280 Q 200 295 248 280" fill="none" stroke="#059669" strokeWidth="2" opacity="0.7" />
-          <path d="M 152 280 Q 200 265 248 280" fill="none" stroke="#059669" strokeWidth="2" opacity="0.7" />
-          <path d="M 200 232 Q 215 280 200 328" fill="none" stroke="#059669" strokeWidth="2" opacity="0.7" />
-          <path d="M 200 232 Q 185 280 200 328" fill="none" stroke="#059669" strokeWidth="2" opacity="0.7" />
+        {/* Central Core Circle (Channels Ring) */}
+        <circle cx="225" cy="225" r="115" fill="#1e1b4b" opacity="0.4" stroke="#475569" strokeWidth="1" strokeDasharray="5" />
+        {/* Globe contour at center */}
+        <circle cx="225" cy="255" r="60" fill="#047857" opacity="0.25" />
+        <ellipse cx="225" cy="255" rx="60" ry="20" fill="none" stroke="#10b981" strokeWidth="1" opacity="0.4" />
+        <ellipse cx="225" cy="255" rx="20" ry="60" fill="none" stroke="#10b981" strokeWidth="1" opacity="0.4" />
 
-          {/* Glow Arc Lines */}
-          <path d="M 50 200 C 50 100, 350 100, 350 200" fill="none" stroke="#38bdf8" strokeWidth="3" opacity="0.4" />
-          <path d="M 80 200 C 80 120, 320 120, 320 200" fill="none" stroke="#6366f1" strokeWidth="2" opacity="0.3" strokeDasharray="5,5" />
-
-          {/* Completely Free Badge at top */}
-          <g transform="translate(145, 30)">
-            <rect x="0" y="0" width="110" height="34" rx="17" fill="url(#flagRed)" stroke="#ef4444" strokeWidth="1.5" />
-            <text x="55" y="21" fill="#ffffff" fontSize="13" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">সম্পূর্ণ ফ্রি</text>
-          </g>
-
-          {/* Bengali Brand Text: Dynamic siteNameBangla */}
-          <text 
-            x="200" 
-            y="115" 
-            fill="#ffffff" 
-            fontSize="32" 
-            fontWeight="900" 
-            textAnchor="middle" 
-            fontFamily="sans-serif"
-            letterSpacing="0.5"
-            stroke="#000000"
-            strokeWidth="3.5"
-            paintOrder="stroke"
-          >
-            {siteNameBangla}
+        {/* Red Shield Banner: "সম্পূর্ণ ফ্রি" */}
+        <g transform="translate(225, 60)">
+          <path d="M -65,-14 H 65 V 10 Q 0,22 -65,10 Z" fill="url(#redPill)" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))" />
+          <text x="0" y="4" fill="#ffffff" fontSize="14" fontWeight="900" textAnchor="middle" letterSpacing="1" fontFamily="sans-serif">
+            সম্পূর্ণ ফ্রি
           </text>
+        </g>
 
-          {/* Subtitle: Dynamic siteNameEnglish */}
-          <text 
-            x="200" 
-            y="152" 
-            fill="url(#goldGrad)" 
-            fontSize="18" 
-            fontWeight="800" 
-            textAnchor="middle" 
-            fontFamily="sans-serif"
-            letterSpacing="1"
-            stroke="#000000"
-            strokeWidth="2.5"
-            paintOrder="stroke"
-          >
-            {siteNameEnglish.toUpperCase()}
+        {/* Bold Title "বিডি লাইভ টিভি" & English "BD LIVE TV" */}
+        <text 
+          x="225" 
+          y="135" 
+          fill="#ffffff" 
+          fontSize="36" 
+          fontWeight="900" 
+          textAnchor="middle" 
+          filter="drop-shadow(0 3px 5px rgba(0,0,0,0.8))"
+          fontFamily="system-ui, sans-serif"
+        >
+          {siteNameBangla}
+        </text>
+
+        <text 
+          x="225" 
+          y="172" 
+          fill="url(#goldText)" 
+          fontSize="19" 
+          fontWeight="900" 
+          letterSpacing="4" 
+          textAnchor="middle" 
+          fontFamily="monospace, sans-serif"
+          filter="drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
+        >
+          {siteNameEnglish.toUpperCase()}
+        </text>
+
+        {/* Dial segmented channel logos (representative geometric dots) */}
+        <g opacity="0.6">
+          <circle cx="225" cy="255" r="45" fill="none" stroke="#334155" strokeWidth="3" />
+          <circle cx="185" cy="235" r="8" fill="#ef4444" />
+          <circle cx="265" cy="235" r="8" fill="#eab308" />
+          <circle cx="225" cy="215" r="8" fill="#10b981" />
+          <circle cx="195" cy="275" r="8" fill="#a855f7" />
+          <circle cx="255" cy="275" r="8" fill="#0ea5e9" />
+        </g>
+
+        {/* Glowing Live beacon indicator */}
+        <g transform="translate(160, 315)">
+          <rect x="-10" y="-12" width="46" height="20" rx="6" fill="#ef4444" />
+          <text x="13" y="2" fill="#fff" fontSize="10" stroke="none" fontWeight="900" textAnchor="middle" fontFamily="sans-serif">LIVE</text>
+          
+          {/* Signal wave lines */}
+          <path d="M -5,-2 Q -8,1 -5,4" stroke="#ff0" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path d="M -2,-5 Q -6,1 -2,7" stroke="#ff0" strokeWidth="1.5" fill="none" />
+        </g>
+
+        {/* Bottom capsule: "সব খবর ও লাইভ খেলা একই অ্যাপে" */}
+        <g transform="translate(225, 360)">
+          <rect x="-115" y="-13" width="230" height="26" rx="13" fill="#1e3a8a" stroke="#1d4ed8" strokeWidth="1.5" />
+          <text x="0" y="4" fill="#ffffff" fontSize="13" fontWeight="bold" textAnchor="middle" fontFamily="system-ui, sans-serif">
+            সব খবর ও লাইভ খেলা একই অ্যাপে
           </text>
-        </svg>
-      )}
+        </g>
+      </svg>
     </div>
   );
 }
@@ -220,76 +251,63 @@ interface SlideShowEvent {
 
 const FEATURED_SLIDES: SlideShowEvent[] = [
   {
-    id: 'ch-t20-wc',
-    sport: 'cricket',
-    title: 'ICC T20 World Cup - Live 4K',
-    opponent: 'Bangladesh vs India',
-    status: 'চলমান লাইভ (2nd Innings)',
-    score: 'BAN 158/4 (18.3 Ov) • IND 157/7 (20 Ov)',
-    ticker: 'বাংলাদেশ টাইগার্স এর দুর্দান্ত ব্যাটিং! জয়ের একদম শেষ প্রান্তে বাংলাদেশ।',
-    backdrop: 'from-sky-950 via-slate-900 to-indigo-950',
-    channelName: 'T Sports 4K Live',
-    channelId: 'tsports',
-    badge: 'টি-স্পোর্টস এক্সক্লুসিভ'
-  },
-  {
-    id: 'ch-fifa-wc',
-    sport: 'football',
-    title: 'FIFA World Cup Elite Stage',
-    opponent: 'Argentina vs Brazil',
-    status: 'লাইভ প্রথমার্ধ (22 mins сыграно)',
-    score: 'ARG 1 - 0 BRA',
-    ticker: 'লিওনেল মেসির চমৎকার গোল অ্যাসিস্টে আর্জেন্টিনা এগিয়ে! মারাকানা কাপ্প কাপ্পা!',
-    backdrop: 'from-emerald-950 via-slate-900 to-teal-950',
-    channelName: 'Sony Ten 1 HD Live',
-    channelId: 'sony_ten1',
-    badge: 'ফুটবল ম্যাচ ২'
-  },
-  {
-    id: 'ch-gtv-live',
-    sport: 'cricket',
-    title: 'দ্বিপাক্ষিক সিরিজ আন্তর্জাতিক',
-    opponent: 'Bangladesh vs Sri Lanka Live',
-    status: 'লাঞ্চ বিরতি (Day 1)',
-    score: 'BAN 110/1 (32.0 Ov) • SRI LANKA',
-    ticker: 'ওপেনার তানজিদ হাসান এর দুর্দান্ত হাফ-সেঞ্চুরি ৮২ রান!',
-    backdrop: 'from-blue-950 via-slate-900 to-slate-950',
-    channelName: 'GTV (Gazi TV) Live',
-    channelId: 'gtv_live',
-    badge: 'বাংলাদেশ ভেন্যু আইপিটিভি'
-  },
-  {
-    id: 'ch-news-somoy',
+    id: 'ch-jamuna',
     sport: 'news',
-    title: 'সরাসরি দেশ-বিদেশের খবর',
-    opponent: 'Somoy TV Latest News Feed',
-    status: 'লাইভ সম্প্রচার',
-    score: 'Breaking: গুরুত্বপূর্ণ আপডেটসমূহ',
-    ticker: 'সারাদেশের সকল জেলা ও উপজেলার নিরপেক্ষ খবর সরাসরি স্টুডিও থেকে।',
-    backdrop: 'from-rose-950 via-slate-900 to-slate-950',
-    channelName: 'Somoy News Live',
-    channelId: 'somoy_news',
-    badge: 'টানা ২৪ ঘন্টা সংবাদ'
+    title: 'যমুনা টেলিভিশন সরাসরি',
+    opponent: 'বিশেষ টকশো ও লাইভ কভারেজ',
+    status: 'সরাসরি সম্প্রচার',
+    score: 'যমুনা স্পেশাল • ২৪/৭ লাইভ',
+    ticker: 'সরাসরি সম্প্রচারিত হচ্ছে ঢাকা ও দেশের অন্য সকল প্রান্তের খবরাখবর।',
+    backdrop: 'from-slate-900 via-amber-950/85 to-slate-950',
+    channelName: 'Jamuna TV',
+    channelId: 'jamuna',
+    badge: 'ONLINE HD'
   },
   {
-    id: 'ch-movies-sg',
-    sport: 'special',
-    title: 'সুপার ব্লকবাস্টার সিনেমা',
-    opponent: 'Star Gold Action Specials',
-    status: 'লাইভ সিনেমা স্ক্রিন',
-    score: 'Movie: K.G.F Chapter 2 HD',
-    ticker: 'বিশ্ব ক্রিকেটের বিরতিতে আকর্ষণীয় সব সিনেমার এইচডি সম্প্রচার।',
-    backdrop: 'from-amber-950 via-slate-900 to-slate-950',
-    channelName: 'Star Gold Live BD',
-    channelId: 'star_gold',
-    badge: 'সিনেমা স্পেশাল'
+    id: 'ch-somoy',
+    sport: 'news',
+    title: 'সময় টেলিভিশন সরাসরি',
+    opponent: 'জাতীয় ও আন্তর্জাতিক সংবাদ আপডেট',
+    status: 'সরাসরি সম্প্রচার',
+    score: 'সময় সংবাদ বুলেটিন • ব্রেকিং নিউজ',
+    ticker: 'দেশের প্রথম সারির সংবাদ চ্যানেল সময় টিভিতে প্রতি মুহূর্তের সচল খবরসমূহ সরাসরি।',
+    backdrop: 'from-slate-900 via-rose-950/85 to-slate-950',
+    channelName: 'Somoy TV',
+    channelId: 'somoy',
+    badge: 'Live 24h'
+  },
+  {
+    id: 'ch-tsports',
+    sport: 'cricket',
+    title: 'টি স্পোর্টস সচল লাইভ',
+    opponent: 'বাংলাদেশ বনাম ভারত বিশেষ সিরিজ',
+    status: 'চলমান লাইভ',
+    score: 'BAN 164/5 (19.1) • IND (Batting Next)',
+    ticker: 'টি স্পোর্টস এ দ্বিপাক্ষিক সিরিজ ও ক্রিকেট টুর্নামেন্ট সরাসরি সম্প্রচার।',
+    backdrop: 'from-slate-900 via-emerald-950/85 to-slate-950',
+    channelName: 'T Sports',
+    channelId: 'tsports',
+    badge: 'Live HD'
+  },
+  {
+    id: 'ch-gtv',
+    sport: 'football',
+    title: 'জিটিভি স্পোর্টস লাইভ',
+    opponent: 'আন্তর্জাতিক প্রীতি ম্যাচ লাইভ',
+    status: 'লাইভ প্রথমার্ধ',
+    score: 'ARG 1 - 0 BRA (22\')',
+    ticker: 'গাজী টিভিতে লাইভ বিশ্বকাপ কোয়ালিফায়ার্স এবং ক্রীড়া উৎসব সরাসরি ফিড।',
+    backdrop: 'from-slate-900 via-sky-950/85 to-slate-950',
+    channelName: 'GTV',
+    channelId: 'gtv',
+    badge: 'Live 4K'
   }
 ];
 
 // Beautiful Simulated Broadcast TV Screen with four corner borders showing sports dynamic play animations
 export function BroadcastSimulatedScreen({ slide }: { slide: SlideShowEvent }) {
   return (
-    <div className="relative w-full max-w-sm md:w-80 h-48 rounded-2xl bg-neutral-950 border-[4px] border-slate-800 shadow-2xl overflow-hidden group select-none">
+    <div className="relative w-full max-w-sm md:w-80 h-48 rounded-2xl bg-neutral-950 border-[4px] border-slate-850 shadow-2xl overflow-hidden group select-none">
       
       {/* Real physical glass glare gradient layer */}
       <div className="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20" />
@@ -298,86 +316,153 @@ export function BroadcastSimulatedScreen({ slide }: { slide: SlideShowEvent }) {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.04),rgba(0,255,0,0.01),rgba(0,0,255,0.04))] bg-[size:100%_4px,6px_100%] pointer-events-none z-20" />
 
       {/* Magnificent Neon Four-Corner Display Borders (as requested by user!) */}
-      <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-sky-400 z-30 animate-pulse" />
-      <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-sky-400 z-30 animate-pulse" />
-      <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-sky-400 z-30 animate-pulse" />
-      <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-sky-400 z-30 animate-pulse" />
+      <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-emerald-400 z-30 animate-pulse" />
+      <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-emerald-400 z-30 animate-pulse" />
+      <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-emerald-400 z-30 animate-pulse" />
+      <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-400 z-30 animate-pulse" />
 
-      {/* Screen contents based on sports category */}
-      {slide.sport === 'cricket' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950 via-teal-950 to-slate-950 flex flex-col justify-between p-3 overflow-hidden">
-          {/* Pitch background sketch */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none flex items-center justify-center">
-            {/* Field lines */}
-            <div className="w-48 h-48 rounded-full border border-white" />
-            <div className="absolute w-24 h-36 border border-white" />
+      {/* Jamuna TV Live Simulation */}
+      {slide.channelId === 'jamuna' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-amber-950/40 flex flex-col justify-between p-3 overflow-hidden">
+          {/* Studio Backdrop */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.15)_0%,transparent_70%)] pointer-events-none" />
+          <div className="absolute right-3 top-3 opacity-30 z-10 animate-spin" style={{ animationDuration: '20s' }}>
+            <RefreshCw className="w-10 h-10 text-amber-500" />
           </div>
 
-          {/* Animated Cricket Field simulation */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-end gap-12 z-10 w-full justify-center">
-            {/* Wickets */}
-            <div className="flex gap-1 items-end opacity-80 h-10">
-              <div className="w-1 h-8 bg-amber-200" />
-              <div className="w-1 h-8 bg-amber-200" />
-              <div className="w-1 h-8 bg-amber-200" />
-            </div>
-
-            {/* Simulated Animated Ball */}
-            <motion.div 
-              animate={{ 
-                x: [-120, 0, 120], 
-                y: [-10, -50, 20],
-                scale: [0.5, 1.2, 0.4] 
-              }}
-              transition={{ repeat: Infinity, duration: 2.8, ease: "easeOut" }}
-              className="w-3 h-3 rounded-full bg-gradient-to-tr from-rose-500 to-red-600 shadow-md shadow-red-500/80" 
-            />
-
-            {/* Glowing Cricket Bat */}
-            <motion.div 
-              animate={{ rotate: [0, -35, 15, 0] }}
-              transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut" }}
-              className="origin-bottom-left"
-            >
-              <div className="w-1.5 h-12 bg-gradient-to-b from-amber-400 to-amber-600 rounded-sm shadow-md" />
-            </motion.div>
-          </div>
-
-          {/* Score overlay */}
+          {/* Jamuna TV Red/Gold Graphic */}
           <div className="flex justify-between items-start z-10">
-            <span className="text-[10px] font-sans font-bold bg-amber-500 text-slate-950 px-2 py-0.5 rounded shadow">BAN VS IND</span>
-            <span className="text-[9px] font-sans text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">● LIVE 4K</span>
+            <div className="flex items-center gap-1 bg-gradient-to-r from-red-600 to-amber-600 px-2.5 py-0.5 rounded text-white font-extrabold text-[10px] shadow">
+              <span className="tracking-wide">JAMUNA TV</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            </div>
+            <span className="text-[8px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">● HD STREAM</span>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1.5 z-10 flex items-center justify-between">
-            <span className="text-[10px] font-mono text-emerald-450 font-bold">BAN 158/4 (18.3)</span>
-            <span className="text-[9px] font-mono text-slate-400">CRR: 8.54 • TBA: 12</span>
+          {/* News Studio visualization */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-90">
+            <div className="text-center transform -translate-y-1">
+              <p className="text-2xl animate-bounce" style={{ animationDuration: '3s' }}>🎙️</p>
+              <p className="text-[10px] font-bold text-amber-300 font-sans tracking-widest mt-1">যমুনা স্পেশাল নিউজ ডেস্ক</p>
+              <p className="text-[8px] text-slate-400 mt-0.5">সব খবর সবার আগে লাইভ</p>
+            </div>
+          </div>
+
+          {/* Scrolling Marquee News Ticker in Bangla */}
+          <div className="bg-slate-950/90 border border-slate-800 rounded p-1.5 z-10">
+            <div className="w-full overflow-hidden whitespace-nowrap">
+              <div className="inline-block animate-marquee-fast text-[8.5px] font-sans text-amber-400 font-black">
+                *** যমুনা খবর লাইভ: বিশ্বকাপ ক্রিকেটে বাংলাদেশের দুর্দান্ত প্রস্তুতি ম্যাচ শুরু, ক্রিকেট ভক্তদের স্বতঃস্ফূর্ত উল্লাস...
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {slide.sport === 'football' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950 via-green-950 to-neutral-950 flex flex-col justify-between p-3 overflow-hidden">
-          {/* Pitch background line */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none flex items-center justify-center">
+      {/* Somoy News Live Simulation */}
+      {slide.channelId === 'somoy' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-rose-950/40 flex flex-col justify-between p-3 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15)_0%,transparent_70%)] pointer-events-none" />
+          
+          {/* Equalizer Wave bars at the center representing Studio Feed */}
+          <div className="absolute bottom-11 right-3 flex items-end gap-1 h-6 pointer-events-none z-10">
+            {[1, 2, 3, 4, 5].map((b) => (
+              <motion.div
+                key={b}
+                animate={{ height: ['15%', '90%', '40%', '98%', '15%'] }}
+                transition={{ repeat: Infinity, duration: 1.2 + (b * 0.12), ease: 'easeInOut' }}
+                className="w-1 bg-red-500 rounded-t shadow"
+              />
+            ))}
+          </div>
+
+          <div className="flex justify-between items-start z-10">
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-slate-900 px-2.5 py-0.5 rounded text-white font-extrabold text-[10.5px] shadow">
+              <span>SOMOY NEWS</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+            </div>
+            <span className="text-[8px] font-mono text-red-400 bg-red-500/10 px-1.5 py-0.2 rounded border border-red-500/20">● 7/24 DVB-T</span>
+          </div>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-90">
+            <div className="text-center transform -translate-y-1">
+              <p className="text-2xl animate-pulse">📺</p>
+              <p className="text-[10px] font-bold text-red-00 font-sans tracking-widest mt-1">সময় সংবাদ লাইভ ফিড</p>
+              <p className="text-[8px] text-slate-400 mt-0.5">জাতীয় বুলেটিন চলছে সরাসরি</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-950/90 border border-slate-800 rounded p-1.5 z-10">
+            <div className="w-full overflow-hidden whitespace-nowrap">
+              <div className="inline-block animate-marquee-fast text-[8.5px] font-sans text-rose-450 font-black">
+                *** ব্রেকিং লাইভ: ঢাকা শহরের আবহাওয়া নিয়ে বিশেষ সংবাদ সম্মেলন সরাসরি সম্প্রচারিত তথ্য চিত্র...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* T Sports Cricket Live Simulation */}
+      {slide.channelId === 'tsports' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-emerald-950/40 flex flex-col justify-between p-3 overflow-hidden">
+          <div className="absolute inset-0 opacity-15 pointer-events-none flex items-center justify-center">
+            <div className="w-48 h-48 rounded-full border border-white" />
+            <div className="absolute w-24 h-36 border border-white" />
+          </div>
+
+          {/* Cricket Ball & Bat Animation */}
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-end gap-11 z-10 w-full justify-center">
+            <div className="flex gap-0.5 items-end opacity-80 h-8">
+              <div className="w-0.5 h-6 bg-amber-200" />
+              <div className="w-0.5 h-6 bg-amber-200" />
+              <div className="w-0.5 h-6 bg-amber-200" />
+            </div>
+            <motion.div 
+              animate={{ 
+                x: [-100, 0, 100], 
+                y: [-5, -45, 15],
+                scale: [0.5, 1.2, 0.4] 
+              }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: "easeOut" }}
+              className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-rose-500 to-red-600 shadow-md shadow-red-500/80" 
+            />
+            <motion.div animate={{ rotate: [0, -35, 15, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }} className="origin-bottom-left">
+              <div className="w-1 h-10 bg-amber-500 rounded-sm" />
+            </motion.div>
+          </div>
+
+          <div className="flex justify-between items-start z-10">
+            <span className="text-[10px] font-extrabold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded shadow">T SPORTS LIVE</span>
+            <span className="text-[8px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">● 4K BROADCAST</span>
+          </div>
+
+          <div className="bg-slate-950/90 border border-slate-800 rounded p-1.5 z-10 flex items-center justify-between">
+            <span className="text-[10px] font-mono text-emerald-450 font-black">BAN 164/5 (19.1)</span>
+            <span className="text-[8.5px] font-mono text-slate-450">CRR: 8.58 • RRR: 10.2</span>
+          </div>
+        </div>
+      )}
+
+      {/* GTV Sports Live Simulation */}
+      {slide.channelId === 'gtv' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-sky-950/40 flex flex-col justify-between p-3 overflow-hidden">
+          <div className="absolute inset-0 opacity-15 pointer-events-none flex items-center justify-center">
             <div className="w-full h-[1px] bg-white absolute top-1/2" />
             <div className="w-24 h-24 rounded-full border border-white" />
           </div>
 
-          {/* Simulated Animated Goal Post & Football */}
+          {/* Football Kick-net Animation */}
           <div className="absolute bottom-10 inset-x-0 flex items-center justify-center z-10">
-            {/* Goal Net mockup */}
-            <div className="relative w-40 h-20 border-2 border-b-0 border-white/60 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:6px_6px] flex items-center justify-center">
-              {/* Flying Football */}
+            <div className="relative w-36 h-16 border border-b-0 border-white/40 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:5px_5px] flex items-center justify-center">
               <motion.div 
                 animate={{ 
                   scale: [0.4, 1.4, 0.8], 
-                  x: [-80, -30, 40],
-                  y: [20, -15, 10],
+                  x: [-70, -20, 35],
+                  y: [15, -10, 8],
                   rotate: [0, 360, 720]
                 }}
-                transition={{ repeat: Infinity, duration: 3.2, ease: "easeOut" }}
-                className="w-4 h-4 rounded-full bg-white border border-slate-900 flex items-center justify-center text-[7px] font-black text-black select-none pointer-events-none shadow-md"
+                transition={{ repeat: Infinity, duration: 3.0, ease: "easeOut" }}
+                className="w-3.5 h-3.5 rounded-full bg-white border border-slate-900 flex items-center justify-center text-[6px] font-black"
               >
                 ⚽
               </motion.div>
@@ -385,89 +470,20 @@ export function BroadcastSimulatedScreen({ slide }: { slide: SlideShowEvent }) {
           </div>
 
           <div className="flex justify-between items-start z-10">
-            <span className="text-[10px] font-sans font-bold bg-sky-500 text-white px-2 py-0.5 rounded shadow">ARG VS BRA</span>
-            <span className="text-[9px] font-sans text-rose-455 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">● LIVE G1</span>
+            <span className="text-[10px] font-extrabold bg-sky-500 text-white px-2 py-0.5 rounded shadow">GTV LIVE</span>
+            <span className="text-[8px] font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-00/20">● 1080P Feed</span>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1.5 z-10 flex items-center justify-between">
-            <span className="text-[10px] font-mono text-emerald-450 font-bold">ARG 1 - 0 BRA</span>
-            <span className="text-[10px] font-mono text-slate-400">22' (PR)</span>
-          </div>
-        </div>
-      )}
-
-      {slide.sport === 'news' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-rose-950 via-slate-950 to-neutral-950 flex flex-col justify-between p-3 overflow-hidden">
-          {/* Breaking News glowing bar layout */}
-          <div className="absolute inset-y-12 left-0 right-0 bg-gradient-to-r from-red-600/30 to-rose-600/50 backdrop-blur-sm flex items-center p-2 z-10 border-y border-red-500/20">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-ping mr-2 shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-yellow-300 tracking-wider">BREAKING NEWS</span>
-              <span className="text-[10px] font-bold text-white leading-tight">সময় টিভি সরাসরি স্টুডিও সম্প্রচার</span>
-            </div>
-          </div>
-
-          {/* Equalizer Visualizer Bars block */}
-          <div className="absolute bottom-11 right-3 flex items-end gap-1 h-8 pointer-events-none z-10">
-            {[1, 2, 3, 4, 5].map((bar) => (
-              <motion.div
-                key={bar}
-                animate={{ height: ['15%', '85%', '40%', '95%', '15%'] }}
-                transition={{ repeat: Infinity, duration: 1 + (bar * 0.15), ease: "easeInOut" }}
-                className="w-1.5 bg-red-500 rounded-t shadow"
-              />
-            ))}
-          </div>
-
-          <div className="flex justify-between items-start z-10">
-            <span className="text-[10px] font-sans font-bold bg-rose-600 text-white px-2 py-0.5 rounded shadow">SOMOY NEWS</span>
-            <span className="text-[9px] font-sans text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">● LIVE FEED</span>
-          </div>
-
-          <div className="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1.5 z-10 flex items-center justify-between">
-            <span className="text-[10px] font-mono text-amber-450 font-bold">গুরুত্বপূর্ণ আপডেটসমূহ</span>
-            <span className="text-[9px] font-mono text-slate-400">Live 24h</span>
-          </div>
-        </div>
-      )}
-
-      {slide.sport === 'special' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-950 via-slate-950 to-neutral-950 flex flex-col justify-between p-3 overflow-hidden">
-          {/* Animated Movie Projector spotlight cone */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.18)_0%,transparent_75%)] pointer-events-none" />
-
-          {/* Moving Cinema film rolls */}
-          <div className="absolute right-3 top-3 flex items-center gap-1.5 opacity-30 z-10">
-            <RefreshCw className="w-8 h-8 text-amber-500 animate-[spin_8s_linear_infinite]" />
-          </div>
-
-          {/* Film block simulation */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.div 
-              animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.6, 0.95, 0.6] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="text-center"
-            >
-              <p className="text-[24px]">🎬</p>
-              <p className="text-[9px] font-bold text-amber-400 tracking-widest">STAR GOLD ACTION HD</p>
-            </motion.div>
-          </div>
-
-          <div className="flex justify-between items-start z-10">
-            <span className="text-[10px] font-sans font-bold bg-amber-500 text-slate-950 px-2 py-0.5 rounded shadow">MOVIE SP</span>
-            <span className="text-[9px] font-sans text-rose-450 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 uppercase tracking-widest animate-pulse">● PLAYING HD</span>
-          </div>
-
-          <div className="bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1.5 z-10 flex items-center justify-between">
-            <span className="text-[10px] font-mono text-slate-200">K.G.F Chapter 2 HD</span>
-            <span className="text-[9px] font-mono text-slate-400">720p BD</span>
+          <div className="bg-slate-950/90 border border-slate-800 rounded p-1.5 z-10 flex items-center justify-between">
+            <span className="text-[10px] font-mono text-sky-400 font-black">ARG 1 - 0 BRA</span>
+            <span className="text-[8.5px] font-mono text-slate-450">2nd Half Play</span>
           </div>
         </div>
       )}
 
       {/* Screen Overlay Play Circle overlay on hover */}
       <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-15 backdrop-blur-3xs">
-        <div className="w-12 h-12 rounded-full bg-sky-500/90 flex items-center justify-center text-white shadow-xl transform scale-90 group-hover:scale-100 transition-all cursor-pointer">
+        <div className="w-12 h-12 rounded-full bg-emerald-500/90 flex items-center justify-center text-white shadow-xl transform scale-90 group-hover:scale-100 transition-all cursor-pointer">
           <Play className="w-6 h-6 fill-current text-white translate-x-0.5" />
         </div>
       </div>
@@ -502,11 +518,11 @@ export default function LandingPage({
   const siteNameEnglish = localStorage.getItem('site_name_english') || 'Free World Cup BD';
   const siteNameBangla = localStorage.getItem('site_name_bangla') || 'বিডি লাইভ টিভি';
 
-  // Auto rotate slide carousel interval
+  // Auto rotate slide carousel interval (Changing exactly every 5 seconds)
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % FEATURED_SLIDES.length);
-    }, 4500);
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -535,149 +551,69 @@ export default function LandingPage({
   const marqueeList2 = [...displayChannels].reverse().concat([...displayChannels].reverse());
 
   return (
-    <div id="landing-page-root" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500/35 selection:text-white relative overflow-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/60 via-slate-950 to-slate-950">
+    <div id="landing-page-root" className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 relative">
       
-      {/* Decorative Grid Mesh Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35 pointer-events-none" />
-
-      {/* Atmospheric Top Light Flares */}
-      <div className="absolute top-[-10%] left-[20%] w-[400px] h-[400px] bg-sky-505/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute top-[10%] right-[15%] w-[350px] h-[350px] bg-indigo-605/10 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* Floating Sticky Header */}
-      <header id="landing-header" className="sticky top-0 bg-slate-950/70 backdrop-blur-xl border-b border-slate-900/90 z-50 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-18 flex items-center justify-between">
-          
-          {/* Brand Logo with updated "Free World Cup BD" Header */}
-          <div className="flex items-center gap-3 select-none cursor-pointer group" onClick={onStartApp}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-sky-600 to-indigo-550 flex items-center justify-center shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform">
-              <Tv className="w-5.5 h-5.5 text-white animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-md md:text-lg font-black tracking-tight bg-gradient-to-r from-white via-slate-205 to-sky-400 bg-clip-text text-transparent">
-                  {siteNameEnglish}
-                </span>
-                <span className="text-[9px] font-sans font-black bg-rose-505/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded-md shadow uppercase tracking-wide animate-pulse">
-                  লাইভ
-                </span>
-              </div>
-              <p className="text-[9px] text-slate-400 font-sans tracking-wide">ফ্রি লাইভ স্পোর্টস ও টিভি পোর্টাল</p>
-            </div>
-          </div>
-
-          {/* Header Actions */}
-          <div className="flex items-center gap-3">
-            {/* Beautiful App update detection banner - only appears when broadcast active */}
-            {isUpdateBroadcastActive && (
-              <button
-                id="btn-landing-check-update"
-                onClick={onTriggerUpdate}
-                title="নতুন সংস্করণ বা আপডেট চেক করুন"
-                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500/10 to-amber-600/10 hover:from-amber-500/20 hover:to-amber-600/20 text-amber-400 text-2xs md:text-xs font-bold rounded-lg border border-amber-500/35 hover:border-amber-400 transition-all cursor-pointer shadow active:scale-95 group animate-pulse"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>আপডেট চেক</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              </button>
-            )}
-
-            {isLoggedIn && currentUser ? (
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="hidden sm:flex flex-col text-right">
-                  <div className="flex items-center gap-1.5 justify-end">
-                    <span className="text-xs font-bold text-slate-200">{currentUser.name}</span>
-                    <span className="text-[9px] font-sans font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded shadow">
-                      {currentUser.badge}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-400">@{currentUser.username}</span>
-                </div>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-sky-550 to-indigo-500 p-0.5 shadow">
-                  <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center font-bold text-[13px] text-sky-400">
-                    {currentUser.avatar ? (
-                      currentUser.avatar.startsWith('data:') || currentUser.avatar.startsWith('http') ? (
-                        <img src={currentUser.avatar} alt="User" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        currentUser.avatar.substring(0, 2).toUpperCase()
-                      )
-                    ) : (
-                      currentUser.name.slice(0, 2).toUpperCase()
-                    )}
-                  </div>
-                </div>
-                <button
-                  id="btn-landing-logout"
-                  onClick={onLogout}
-                  title="লগআউট"
-                  className="p-2 bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 rounded-lg border border-slate-800 hover:border-rose-900/30 transition-all cursor-pointer shadow"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                id="btn-landing-login-trigger"
-                onClick={onOpenLogin}
-                className="flex items-center gap-2 px-3 md:px-4 py-2 bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-200 text-2xs md:text-xs font-bold rounded-lg border border-slate-800 hover:border-slate-700 transition-all cursor-pointer shadow active:scale-95"
-              >
-                <LogIn className="w-3.5 h-3.5 text-sky-400" />
-                <span className="hidden xs:inline">প্রবেশ করুন</span>
-                <span className="xs:hidden">লগইন</span>
-              </button>
-            )}
-
-
-
-            <button
-              id="btn-nav-direct-stream"
-              onClick={onStartApp}
-              className="flex items-center gap-1.5 px-3 md:px-5 py-2.5 bg-gradient-to-r from-sky-600 to-indigo-650 hover:from-sky-505 hover:to-indigo-505 text-white text-2xs md:text-xs font-black rounded-lg transition-all shadow-lg active:scale-95 cursor-pointer shadow-indigo-950/20"
-            >
-              <Play className="w-3.5 h-3.5 fill-current text-white animate-bounce-short" />
-              <span>প্লেয়ারে যান</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <section className="max-w-7xl mx-auto px-4 md:px-6 py-6 z-10 relative">
-        <StatsDisplay />
-      </section>
-
-      {/* Hero & Logo Visual Block */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-12 pb-6 flex flex-col items-center justify-center text-center relative z-10">
+      {/* Container */}
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 overflow-x-hidden">
         
-        {/* Glowing Badge Area linking Map logo */}
-        <div className="flex flex-col items-center gap-3 mb-6">
-          <FreeWorldCupBDLogo className="w-36 h-36 md:w-44 md:h-44 hover:scale-103 transition-transform duration-300" />
-          
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-950/60 border border-sky-500/20 shadow mt-2 text-[11px] font-semibold text-slate-200"
+        {/* Floating Header */}
+        <header id="landing-header" className="py-6 flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 md:gap-3 cursor-pointer group shrink min-w-0" onClick={onStartApp}>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
+              <Tv className="w-5.5 h-5.5 md:w-6 md:h-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-base md:text-xl font-black text-white tracking-tighter block truncate">{siteNameEnglish}</span>
+              <p className="text-[10px] md:text-xs text-emerald-400 font-semibold tracking-wide uppercase truncate">Free Live Platform</p>
+            </div>
+          </div>
+          <motion.button 
+            onClick={onStartApp}
+            whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
+            whileTap={{ scale: 0.95 }}
+            className="px-4 py-2 md:px-6 md:py-2.5 bg-white/5 hover:bg-white/10 text-white text-[11px] md:text-xs font-bold rounded-lg border border-white/10 transition-all shrink-0 cursor-pointer active:scale-95"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-            </span>
-            <span>সরাসরি সম্পুর্ণ ফ্রিতে ২০00+ বিশ্বখ্যাত লাইভ খেলাধুলা ও সকল টিভি চ্যানেল</span>
-          </motion.div>
-        </div>
+            GET STARTED
+          </motion.button>
+        </header>
 
-        {/* Catchy Main Heading */}
-        <h2 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight max-w-4xl leading-tight text-white mb-5 font-sans">
-          বাংলাদেশের নাম্বার ১ স্পোর্টস প্রিমিয়ার <br />
-          <span className="bg-gradient-to-r from-sky-400 via-yellow-200 to-emerald-400 bg-clip-text text-transparent">
-            {siteNameEnglish} Live TV
-          </span>
-        </h2>
-
-        {/* Subtext description */}
-        <p className="text-slate-400 text-xs md:text-base max-w-2xl leading-relaxed mb-8 font-sans">
-          কোনো রকম বাফারিং ছাড়াই ফ্রিতে উপভোগ করুন ২০২৩ সালের টি-টোয়েন্টি বিশ্বকাপ, চ্যাম্পিয়নস ট্রফি, ফুটবল লিগ আর দেশী-বিদেশী সকল লাইভ টিভি চ্যানেল! স্পষ্ট ৪কে লাইভ ফিড ও তাৎক্ষণিক রিফ্রেশ ব্যাকআপ সাপোর্ট।
-        </p>
-      </section>
+        {/* Hero Section */}
+        <section className="py-16 flex flex-col items-center text-center">
+          <FreeWorldCupBDLogo className="w-32 h-32 mb-8 drop-shadow-2xl" />
+          <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter">
+             {siteNameEnglish}
+          </h1>
+          <p className="text-lg text-slate-400 max-w-2xl mb-10 leading-relaxed">
+            লাইভ খেলাধুলা ও বাংলাদেশি টিভি চ্যানেল উপভোগের জন্য সবচেয়ে নির্ভরযোগ্য প্ল্যাটফর্ম। সব সময়, সবখানে — ফ্রিতে।
+            <br />
+            Enjoy 100% free live sports, cricket matches, and TV channels instantly. Secure, fast, and buffering-free.
+          </p>
+          
+          <motion.button 
+            onClick={onStartApp}
+            whileHover={{ scale: 1.06, shadow: "0 0 25px rgba(16, 185, 129, 0.6)" }}
+            whileTap={{ scale: 0.94 }}
+            animate={{
+              boxShadow: ["0 0 0 0 rgba(16,185,129,0.4)", "0 0 0 12px rgba(16,185,129,0)", "0 0 0 0 rgba(16,185,129,0)"],
+            }}
+            transition={{
+              boxShadow: {
+                repeat: Infinity,
+                duration: 1.8,
+                ease: "easeOut"
+              }
+            }}
+            className="px-12 py-5 bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-500 bg-[length:200%_auto] hover:bg-right text-white font-extrabold text-xl rounded-2xl shadow-xl shadow-emerald-950/50 transition-all cursor-pointer relative overflow-hidden group tracking-wider flex items-center gap-3"
+          >
+            <span className="relative z-10">GET STARTED</span>
+            <Play className="w-5 h-5 text-white animate-pulse relative z-10 fill-current" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none" />
+          </motion.button>
+          
+          <div className="mt-12 w-full">
+            <StatsDisplay />
+          </div>
+        </section>
 
       {/* BIG SPORTS CAROUSEL CONTAINER ("লাইটারের মত সরাসরি করবে...") */}
       <section className="max-w-4xl w-full mx-auto px-4 md:px-6 pb-12 relative z-10 select-none">
@@ -758,9 +694,9 @@ export default function LandingPage({
                     
                     <button
                       onClick={onStartApp}
-                      className="mt-3 w-full px-5 py-2.5 bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-lg hover:shadow-sky-950/20 cursor-pointer transform active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
+                      className="mt-3 w-full px-5 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-lg hover:shadow-emerald-950/20 cursor-pointer transform active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
                     >
-                      <span>সরাসরি প্লেয়ারে দেখতে ক্লিক করুন</span>
+                      <span>START WATCHING LIVE</span>
                       <span>&rarr;</span>
                     </button>
                   </div>
@@ -840,10 +776,81 @@ export default function LandingPage({
         </div>
       </section>
 
+      {/* SECTION: PLATFORM RULES, DISCLOSURE & SECURITY GUARANTEES (আমাদের ওয়েবসাইট টা সত্য বলে দিয়ে দেন) */}
+      <section className="max-w-5xl w-full mx-auto px-4 md:px-6 pb-20 relative z-10">
+        <div className="bg-gradient-to-r from-emerald-950/20 via-slate-900/40 to-teal-950/20 border border-slate-800/80 rounded-3xl p-6 md:p-10 shadow-2xl backdrop-blur-md">
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+            
+            {/* Left intro details */}
+            <div className="md:w-1/3 shrink-0">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                অফিসিয়াল নীতি ও সত্যতা
+              </span>
+              <h3 className="text-2xl md:text-3xl font-black text-white mt-4 leading-tight">
+                প্ল্যাটফর্মের সত্যতা ও <br />নিরাপত্তা নীতিমালা
+              </h3>
+              <p className="text-xs text-slate-400 font-sans mt-3 leading-relaxed">
+                Free World Cup BD একটি শতভাগ নির্ভরযোগ্য এবং নিরাপদ আইপিটিভি পোর্টাল। আমাদের উদ্দেশ্য বিশ্বমানের নিরাপত্তা বজায় রেখে আপনাদের কাছে সেরা খেলার সম্প্রচার পৌঁছে দেওয়া।
+              </p>
+              <div className="mt-6 p-4 bg-slate-950/60 border border-slate-850 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                  <ShieldCheck className="w-5.5 h-5.5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">SSL এনক্রিপ্টেড ডাটা</p>
+                  <p className="text-[10px] text-slate-400 font-sans mt-0.5">১০০% সুরক্ষিত লাইভ ভিডিও ট্রাফিক প্রোটোকল</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side checklist grid */}
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
+              
+              {/* Item 1 */}
+              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
+                <span className="text-amber-400 text-xs font-extrabold block">📡 সচল আইপিটিভি গ্যারান্টি (100% Live IPTV)</span>
+                <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
+                  আমরা সরাসরি প্রকাশকদের সচল ও উন্মুক্ত স্ট্রিম ডাটাবেজ ব্যবহার করি। সার্ভারের গতি ও ভিডিও স্ট্যাবিলিটি রক্ষার জন্য আমরা নিরবচ্ছিন্নভাবে ব্যাকএন্ড রিকোয়েস্ট মনিটর করে থাকি।
+                </p>
+              </div>
+
+              {/* Item 2 */}
+              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
+                <span className="text-emerald-400 text-xs font-extrabold block">🔐 ডিক্রিপশন নিরাপত্তা (Data Protection)</span>
+                <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
+                  আমাদের চ্যানেল ডেটা ডিক্রিপশন এবং প্লেলিস্ট এপিআই সুরক্ষিত। আমরা কোনো ব্যবহারকারীর ব্যক্তিগত ডাটা সংরক্ষণ করি না। এটি সম্পূর্ণ সুরক্ষিত এবং ভাইরাসমুক্ত।
+                </p>
+              </div>
+
+              {/* Item 3 */}
+              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
+                <span className="text-rose-400 text-xs font-extrabold block">❌ কোনো প্রতারণামূলক লিংক বা পেমেন্ট নেই</span>
+                <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
+                  Free World Cup BD সচল রাখতে আমরা তৃতীয় পক্ষের ক্ষতিকর বা পপআপ অ্যাড ব্যবহার থেকে বিরত থাকি। আমাদের সমস্ত কন্টেন্ট সম্পূর্ণ বিন্যামূল্যে সচল রাখা হয়।
+                </p>
+              </div>
+
+              {/* Item 4 */}
+              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
+                <span className="text-sky-400 text-xs font-extrabold block">⚖️ ফেয়ার ইউজ ও কপিরাইট ক্লিয়ারেন্স (Fair Usage)</span>
+                <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
+                  আমরা অন্যান্য ডিস্ট্রিবিউটর বা অনলাইন আইপিটিভি সোর্স থেকে সংগৃহীত ডাটা প্রদর্শন করি। কোনো চ্যানেল মালিক যদি সম্প্রচার বন্ধ করতে চান, আমরা সাথে সাথে তা অপসারণ করি।
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Closes the inner max-w-7xl layout container to allow marquee to span full-screen width */}
+      </div>
+
       {/* CONTINUOUS DYNAMIC CHANNEL MARQUEES ("চ্যানেলগুলো যাওয়া আসা করবে...") */}
-      <section className="bg-slate-950/60 border-t border-slate-900 py-6 overflow-hidden select-none relative z-10 w-full mt-auto">
+      <section className="bg-slate-950/60 border-t border-b border-slate-900 py-6 overflow-hidden select-none relative z-10 w-full mt-auto">
         <div className="max-w-7xl mx-auto px-4 mb-3 text-center sm:text-left flex items-center justify-center sm:justify-start gap-2 text-slate-450">
-          <Star className="w-4 h-4 text-sky-400 fill-sky-500/10" />
+          <Star className="w-4 h-4 text-emerald-400 fill-emerald-500/10" />
           <span className="text-xs font-bold uppercase tracking-widest font-sans">প্লেয়ার সচল আইপিটিভি লাইভ চ্যানেলসমূহ (Dynamic Shifting Track)</span>
         </div>
 
@@ -854,7 +861,7 @@ export default function LandingPage({
               <div 
                 key={`${ch.id}-m1-${idx}`}
                 onClick={onStartApp}
-                className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-900/90 border border-slate-805/75 rounded-xl text-xs hover:border-sky-500/40 hover:bg-slate-850 cursor-pointer transition-all shadow"
+                className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-900/90 border border-slate-805/75 rounded-xl text-xs hover:border-emerald-500/40 hover:bg-slate-850 cursor-pointer transition-all shadow"
               >
                 {ch.logo ? (
                   <img 
@@ -872,7 +879,7 @@ export default function LandingPage({
                   </div>
                 )}
                 <span className="font-bold text-slate-100">{ch.name}</span>
-                <span className="text-[9px] font-sans font-medium px-1.5 py-0.2 bg-slate-950 text-sky-400 rounded-md border border-slate-850">
+                <span className="text-[9px] font-sans font-medium px-1.5 py-0.2 bg-slate-950 text-emerald-400 rounded-md border border-slate-850">
                   {ch.group || 'Live'}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -888,7 +895,7 @@ export default function LandingPage({
               <div 
                 key={`${ch.id}-m2-${idx}`}
                 onClick={onStartApp}
-                className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-900/90 border border-slate-805/75 rounded-xl text-xs hover:border-sky-500/40 hover:bg-slate-850 cursor-pointer transition-all shadow"
+                className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-900/90 border border-slate-805/75 rounded-xl text-xs hover:border-emerald-500/40 hover:bg-slate-850 cursor-pointer transition-all shadow"
               >
                 {ch.logo ? (
                   <img 
@@ -906,7 +913,7 @@ export default function LandingPage({
                   </div>
                 )}
                 <span className="font-bold text-slate-100">{ch.name}</span>
-                <span className="text-[9px] font-sans font-medium px-1.5 py-0.2 bg-slate-950 text-indigo-400 rounded-md border border-slate-850">
+                <span className="text-[9px] font-sans font-medium px-1.5 py-0.2 bg-slate-950 text-teal-400 rounded-md border border-slate-850">
                   {ch.group || 'Live'}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -916,16 +923,16 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* Styled Footer copyright statement */}
+      {/* Styled Footer copyright statement (rendered completely fluid outside the main grid body) */}
       <footer className="bg-slate-950 border-t border-slate-900 py-6 relative z-10 text-center text-slate-500 text-xs font-sans mt-auto">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p>© {new Date().getFullYear()} {siteNameEnglish}. সর্বস্বত্ব সংরক্ষিত।</p>
           <div className="flex gap-4 text-slate-400">
-            <span className="hover:text-white transition-colors cursor-pointer" onClick={onStartApp}>টিভি প্লেয়ার</span>
+            <span className="hover:text-white transition-colors cursor-pointer" onClick={onStartApp}>GET STARTED</span>
             <span>•</span>
-            <span className="hover:text-white transition-colors cursor-pointer" onClick={onOpenLogin}>প্রাইভেসি</span>
+            <span className="hover:text-white transition-colors cursor-pointer" onClick={onOpenLogin}>PRIVACY</span>
             <span>•</span>
-            <span className="hover:text-white transition-colors cursor-pointer" onClick={onStartApp}>শর্তাবলী</span>
+            <span className="hover:text-white transition-colors cursor-pointer" onClick={onStartApp}>TERMS</span>
           </div>
         </div>
       </footer>

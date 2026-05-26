@@ -13,6 +13,45 @@ import https from 'https';
 import http from 'http';
 import { URL } from 'url';
 import fs from 'fs';
+import { GoogleGenAI } from '@google/genai';
+
+// Initialize the secure-level server side Gemini API Client with safe fallback
+const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAANQhCoBEGY8QwAPMv3nfGyKwNJW3wabA';
+const ai = new GoogleGenAI({
+  apiKey: GEMINI_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build'
+    }
+  }
+});
+
+const SUPPORT_SYSTEM_INSTRUCTION = `
+You are a friendly, natural, and helpful Live Support Agent named "Bongo Support Agent (AI)" representing BD LIVE TV / Bongo IPTV. 
+Your main goal is to greet users warmly, answer their common questions, and help them troubleshoot channel streams politely and elegantly in Bengali, Bangla/Banglish, or English.
+
+CRITICAL GUARDRAIL - DO NOT SHARE:
+1. Under no circumstances should you ever reveal or share our TV playlist source URLs, server m3u, or private .m3u8 web links.
+2. Do not leak internal backend server IPs, database details, admin credentials, user hashes, or private developer settings.
+3. If users ask for M3U playlist file downloads, explain that the live channels are securely optimized directly inside our web app for safe, instant, and copyright-protected viewing and cannot be exported outside.
+
+GUIDELINES FOR HELPING USERS:
+- If a channel stream is buffering or fails to load, advise them to click the "রিফ্রেশ" (Refresh/Reload) button above the TV player or switch to "সার্ভার ২ (Alternate Links)" in the player.
+- Tell them that we regularly add and update news, sports, and entertainment channels to keep the streaming feeds live.
+- Keep your replies highly concise, supporting, and brief (under 2-3 sentences), so they resemble a fast-typing live chat clerk.
+- Address them politely using natural Bengali/Banglish or English depending on their input message. Speak as a proud, helpful support staff of BD LIVE TV!
+`;
+
+function parseDataUrl(dataUrl: string) {
+  const matches = dataUrl.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.*)$/);
+  if (!matches || matches.length !== 3) {
+    return null;
+  }
+  return {
+    mimeType: matches[1],
+    data: matches[2]
+  };
+}
 
 // A beautifully robust, secure-level-bypassing client helper to replace standard undici fetch in node
 // Designed specifically to avoid "ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR" from legacy stream servers 
@@ -889,17 +928,21 @@ interface ActivePresence {
   username: string;
   name: string;
   lastSeen: number;
+  watchingChannel?: string;
+  watchingChannelId?: string;
 }
 let activePresences: Record<string, ActivePresence> = {};
 
 // POST register or update user presence heartbeat
 app.post('/api/presence', (req, res) => {
-  const { username, name } = req.body;
+  const { username, name, watchingChannel, watchingChannelId } = req.body;
   if (username) {
     activePresences[username] = {
       username,
       name: name || username,
-      lastSeen: Date.now()
+      lastSeen: Date.now(),
+      watchingChannel: watchingChannel || '',
+      watchingChannelId: watchingChannelId || ''
     };
   }
   return res.json({ success: true });
@@ -912,8 +955,365 @@ app.get('/api/presence', (req, res) => {
   const list = Object.values(activePresences).filter(u => now - u.lastSeen < 15000);
   return res.json({
     count: list.length,
-    users: list.map(u => ({ username: u.username, name: u.name }))
+    users: list.map(u => ({ 
+      username: u.username, 
+      name: u.name,
+      watchingChannel: u.watchingChannel || '',
+      watchingChannelId: u.watchingChannelId || ''
+    }))
   });
+});
+
+// --- SESSION-BASED CUSTOMER SUPPORT TICKETING ENGINE ---
+const SUPPORT_FILE = path.join(process.cwd(), 'site_support_sessions.json');
+
+interface TicketMessage {
+  id: string;
+  sender: string; // "user" or "admin" or username
+  senderName: string;
+  text: string;
+  time: string;
+  attachmentUrl?: string;
+  attachmentType?: 'image' | 'audio';
+}
+
+interface TicketSession {
+  id: string;
+  username: string;
+  name: string;
+  problem: string;
+  status: 'pending' | 'accepted' | 'closed';
+  createdAt: string;
+  lastMessageAt: string;
+  messages: TicketMessage[];
+}
+
+// Read support sessions helper
+function readSupportSessions(): TicketSession[] {
+  try {
+    if (fs.existsSync(SUPPORT_FILE)) {
+      const data = fs.readFileSync(SUPPORT_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error reading support sessions file:', e);
+  }
+  return [];
+}
+
+// Write support sessions helper
+function writeSupportSessions(sessions: TicketSession[]) {
+  try {
+    fs.writeFileSync(SUPPORT_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error writing support sessions file:', e);
+  }
+}
+
+// Global background worker helper for AI live support assistant auto-replies
+function triggerAISupportReply(sessionId: string) {
+  setTimeout(async () => {
+    try {
+      const freshSessions = readSupportSessions();
+      const activeSession = freshSessions.find(s => s.id === sessionId);
+      if (!activeSession || activeSession.status === 'closed') return;
+
+      // Ensure last message is from user to avoid duplicate loops
+      const lastMsg = activeSession.messages[activeSession.messages.length - 1];
+      if (lastMsg.sender === 'support_agent' || lastMsg.sender === 'system') return;
+
+      // Gather non-system messages to pass to active history context
+      const conversationSnippet = activeSession.messages
+        .filter(m => m.sender !== 'system')
+        .slice(-12) // last 12 messages for richer context window
+        .map(m => `${m.senderName} (${m.sender === 'support_agent' ? 'Agent' : 'User'}): ${m.text}`)
+        .join('\n');
+
+      const userPrompt = `System instructions require you to politely, warmly reply to the user.
+Here is the recent support chat transcript:
+${conversationSnippet}
+
+Generate the agent message responding to the User politely, naturally, in their language, in under 2 sentences. DO NOT prefix with "Agent:" or "Bongo Support Agent:".`;
+
+      let modelResponse;
+      const imgContent = lastMsg.attachmentUrl ? parseDataUrl(lastMsg.attachmentUrl) : null;
+
+      if (imgContent && lastMsg.attachmentType === 'image') {
+        const imgPart = {
+          inlineData: {
+            mimeType: imgContent.mimeType,
+            data: imgContent.data
+          }
+        };
+        const txtPart = {
+          text: `${userPrompt}\n\n[Note: Please inspect the attached user screenshot above and handle their streaming/app error visually.]`
+        };
+        modelResponse = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: { parts: [imgPart, txtPart] },
+          config: {
+            systemInstruction: SUPPORT_SYSTEM_INSTRUCTION,
+            temperature: 0.7
+          }
+        });
+      } else {
+        modelResponse = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: userPrompt,
+          config: {
+            systemInstruction: SUPPORT_SYSTEM_INSTRUCTION,
+            temperature: 0.7
+          }
+        });
+      }
+
+      const replyText = modelResponse.text || 'ধন্যবাদ! আমি আপনার বার্তাটি পেয়েছি। আমাদের লাইভ টিম বিষয়টি দেখছে।';
+
+      // Read and push AI response safely
+      const latestSessions = readSupportSessions();
+      const targetSession = latestSessions.find(s => s.id === sessionId);
+      if (targetSession && targetSession.status !== 'closed') {
+        const aiTimeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+        targetSession.messages.push({
+          id: 'msg_ai_reply_' + Date.now(),
+          sender: 'support_agent',
+          senderName: 'সাপোর্ট এজেন্ট (AI)',
+          text: replyText,
+          time: aiTimeStr
+        });
+        targetSession.lastMessageAt = new Date().toISOString();
+        if (targetSession.status === 'pending') {
+          targetSession.status = 'accepted';
+        }
+        writeSupportSessions(latestSessions);
+      }
+    } catch (gemIniErr) {
+      console.error('Gemini live support reply engine hit an error:', gemIniErr);
+    }
+  }, 900); // Instant & snappy 900ms feel
+}
+
+// GET all customer support sessions
+app.get('/api/support/sessions', (req, res) => {
+  const sessions = readSupportSessions();
+  return res.json(sessions);
+});
+
+// POST to create a support session or restore an active one
+app.post('/api/support/sessions', (req, res) => {
+  const { username, name, problem } = req.body;
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required' });
+  }
+
+  const sessions = readSupportSessions();
+  
+  // Look for any existing pending or accepted session
+  let existingSession = sessions.find(s => s.username === username && s.status !== 'closed');
+  
+  if (existingSession) {
+    // If the problem shifted, let's append it as an update message
+    if (problem && existingSession.problem !== problem) {
+      existingSession.problem = problem;
+      const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+      existingSession.messages.push({
+        id: 'msg_prob_upd_' + Date.now(),
+        sender: 'system',
+        senderName: 'সিস্টেম নোটিশ',
+        text: `ইউজার সমস্যা বিবরণ আপডেট করেছেন: "${problem}"`,
+        time: timeStr
+      });
+      existingSession.lastMessageAt = new Date().toISOString();
+      writeSupportSessions(sessions);
+    }
+    return res.json(existingSession);
+  }
+
+  // Create a brand new session
+  const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  const newSession: TicketSession = {
+    id: 'session_' + username + '_' + Math.floor(Math.random() * 1000000),
+    username,
+    name: name || username,
+    problem: problem || 'অন্যান্য সমস্যা',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    lastMessageAt: new Date().toISOString(),
+    messages: [
+      {
+        id: 'msg_sys_init_' + Date.now(),
+        sender: 'system',
+        senderName: 'হেল্পডেস্ক নোটিশ',
+        text: 'স্বাগতম! আপনার অ্যাকাউন্ট থেকে সাপোর্ট রিকোয়েস্ট সফলভাবে সাবমিট করা হয়েছে। আমাদের একজন এজেন্ট দ্রুত আপনার সাথে কথা বলবেন। অনুগ্রহ করে লাইনে যুক্ত থাকুন।',
+        time: timeStr
+      },
+      {
+        id: 'msg_user_sys_problem_' + Date.now(),
+        sender: username,
+        senderName: name || username,
+        text: `[রিপোর্টেড সমস্যা]: ${problem || 'অন্যান্য সমস্যা'}`,
+        time: timeStr
+      }
+    ]
+  };
+
+  sessions.unshift(newSession); // New sessions show at top of admin view
+  writeSupportSessions(sessions);
+  
+  // Instantly trigger initial support AI answer to reported problem on session creation
+  if (supportConfig.supportEnabled) {
+    triggerAISupportReply(newSession.id);
+  }
+
+  return res.json(newSession);
+});
+
+// POST accept a support session
+app.post('/api/support/sessions/accept', (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Session ID is required' });
+  }
+
+  const sessions = readSupportSessions();
+  const session = sessions.find(s => s.id === id);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  session.status = 'accepted';
+  const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  session.messages.push({
+    id: 'msg_sys_accept_' + Date.now(),
+    sender: 'system',
+    senderName: 'সিস্টেম নোটিশ',
+    text: 'আপনার একাউন্ট এজেন্টের সাথে কানেক্ট হয়েছে, অনুগ্রহ করে আপনার সমস্যা তুলে ধরুন। আমাদের এজেন্ট সাহায্য করতে প্রস্তুত আছেন।',
+    time: timeStr
+  });
+  session.lastMessageAt = new Date().toISOString();
+
+  writeSupportSessions(sessions);
+  return res.json(session);
+});
+
+// POST close a support session
+app.post('/api/support/sessions/close', (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Session ID is required' });
+  }
+
+  const sessions = readSupportSessions();
+  const session = sessions.find(s => s.id === id);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  session.status = 'closed';
+  const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  session.messages.push({
+    id: 'msg_sys_close_' + Date.now(),
+    sender: 'system',
+    senderName: 'সিস্টেম নোটিশ',
+    text: 'এই সাপোর্ট চ্যাট সেশনটি এডমিন বা এজেন্টের অনুরোধে সফলভাবে ক্লোজড করা হয়েছে। ধন্যবাদ!',
+    time: timeStr
+  });
+  session.lastMessageAt = new Date().toISOString();
+
+  writeSupportSessions(sessions);
+  return res.json(session);
+});
+
+// GET messages of a support session (long polling friendly)
+app.get('/api/support/messages/:id', (req, res) => {
+  const { id } = req.params;
+  const sessions = readSupportSessions();
+  const session = sessions.find(s => s.id === id);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  return res.json(session.messages);
+});
+
+// Support Configuration File persistence
+const SUPPORT_CONFIG_FILE = path.join(process.cwd(), 'support_config.json');
+let supportConfig = { supportEnabled: true };
+try {
+  if (fs.existsSync(SUPPORT_CONFIG_FILE)) {
+    supportConfig = JSON.parse(fs.readFileSync(SUPPORT_CONFIG_FILE, 'utf-8'));
+  }
+} catch (e) {
+  // Use default
+}
+
+// GET currently active support availability status
+app.get('/api/support/status', (req, res) => {
+  res.json(supportConfig);
+});
+
+// POST to toggle support status globally (Online / Offline)
+app.post('/api/support/status', (req, res) => {
+  const { supportEnabled } = req.body;
+  if (typeof supportEnabled === 'boolean') {
+    supportConfig.supportEnabled = supportEnabled;
+    try {
+      fs.writeFileSync(SUPPORT_CONFIG_FILE, JSON.stringify(supportConfig, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Error saving support config:', e);
+    }
+  }
+  res.json(supportConfig);
+});
+
+// POST a message to an active support session
+app.post('/api/support/messages', (req, res) => {
+  const { id, sender, senderName, text, attachmentUrl, attachmentType } = req.body;
+  if (!id || !sender || !text) {
+    return res.status(400).json({ error: 'Session ID, sender, and text are required' });
+  }
+
+  // Handle support temp closing block for users
+  const isInternalSender = sender === 'admin' || sender === 'support_agent' || sender === 'system';
+  if (!supportConfig.supportEnabled && !isInternalSender) {
+    return res.status(403).json({ error: 'আমাদের এজেন্ট সাপোর্ট এখন সাময়িকভাবে বন্ধ আছে।' });
+  }
+
+  const sessions = readSupportSessions();
+  const session = sessions.find(s => s.id === id);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found or already closed' });
+  }
+
+  const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  const newMessage: TicketMessage = {
+    id: 'msg_user_' + Date.now() + '_' + Math.floor(Math.random() * 100000),
+    sender,
+    senderName: senderName || sender,
+    text,
+    time: timeStr,
+    attachmentUrl,
+    attachmentType
+  };
+
+  session.messages.push(newMessage);
+  session.lastMessageAt = new Date().toISOString();
+
+  // If user sends a message, set ticket back to pending if closed/accepted to notify admin
+  if (!isInternalSender && session.status === 'closed') {
+    session.status = 'pending';
+  }
+
+  writeSupportSessions(sessions);
+
+  // Trigger Gemini Auto-Reply in the background for users
+  if (!isInternalSender && supportConfig.supportEnabled) {
+    triggerAISupportReply(id);
+  }
+
+  return res.json(session);
 });
 
 // ABUSE REPORTS FILE ON SERVER

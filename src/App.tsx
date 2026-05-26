@@ -15,6 +15,7 @@ import ChannelCard from './components/ChannelCard';
 import LandingPage, { FreeWorldCupBDLogo, StatsDisplay } from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import LiveChat from './components/LiveChat';
+import SupportChat from './components/SupportChat';
 import ProfileEditModal from './components/ProfileEditModal';
 import DynamicAdContainer from './components/DynamicAdContainer';
 
@@ -77,6 +78,27 @@ export default function App() {
 
   // Active Collapsible Live Chat Room Panel State
   const [isChatOpen, setIsChatOpen] = useState<boolean>(true);
+
+  // Live Support Chat States
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
+  const [supportEnabled, setSupportEnabled] = useState<boolean>(true);
+
+  // Sync Live Support toggle status from server
+  useEffect(() => {
+    const fetchSupportStatus = () => {
+      fetch('/api/support/status')
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data.supportEnabled === 'boolean') {
+            setSupportEnabled(data.supportEnabled);
+          }
+        })
+        .catch(err => console.error('Error loading support status:', err));
+    };
+    fetchSupportStatus();
+    const interval = setInterval(fetchSupportStatus, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Centralized Server-Persisted Abuse Reports State
   const [reportsList, setReportsList] = useState<any[]>([]);
@@ -577,6 +599,25 @@ export default function App() {
     }
   });
 
+  // Real-time online users presences
+  const [onlinePresenceUsers, setOnlinePresenceUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchOnlinePresences = () => {
+      fetch('/api/presence')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.users) {
+            setOnlinePresenceUsers(data.users);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchOnlinePresences();
+    const interval = setInterval(fetchOnlinePresences, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Modal and checker system for real updates checking dynamically
   const [isUpdateCheckerOpen, setIsUpdateCheckerOpen] = useState<boolean>(false);
   const [isCheckingUpdateProgress, setIsCheckingUpdateProgress] = useState<boolean>(false);
@@ -737,14 +778,19 @@ export default function App() {
       fetch('/api/presence', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, name })
+        body: JSON.stringify({ 
+          username, 
+          name,
+          watchingChannel: selectedChannel ? selectedChannel.name : 'কোনো চ্যানেল দেখছেন না',
+          watchingChannelId: selectedChannel ? selectedChannel.id : ''
+        })
       }).catch(err => {});
     };
 
     reportPresence();
     const interval = setInterval(reportPresence, 10000);
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser, selectedChannel]);
 
   // Handle user authentication sessions
   const [isProfileEditOpen, setIsProfileEditOpen] = useState<boolean>(false);
@@ -1241,6 +1287,17 @@ export default function App() {
                 👑 LIVE SITE ADMIN PORTAL & CONTROLLER
               </span>
               <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 font-mono font-extrabold uppercase animate-pulse hidden sm:inline">Owner Deck</span>
+              <button
+                onClick={() => {
+                  setIsAdminAuthorized(false);
+                  localStorage.removeItem('bongo_admin_authorized');
+                  setCurrentPage('landing');
+                }}
+                className="py-1 px-2.5 bg-red-950 hover:bg-red-900 border border-red-900 text-red-400 font-extrabold rounded-lg text-[10px] uppercase cursor-pointer select-none transition-all active:scale-95 ml-2"
+                title="লগআউট এবং লক করুন"
+              >
+                লগআউট এডমিন (Lock)
+              </button>
             </div>
           </div>
         </header>
@@ -1498,7 +1555,7 @@ export default function App() {
                             name="pl_url"
                             type="text"
                             placeholder="চ্যানেল ফিড লিঙ্ক..."
-                            className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono"
+                            className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-202 focus:outline-none focus:border-sky-500 font-mono"
                           />
                         </div>
                         <button
@@ -1521,8 +1578,8 @@ export default function App() {
                             <div key={pl.name} className="flex items-center justify-between bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl text-xs gap-3 hover:border-slate-800/80 transition-all">
                               <div className="truncate flex-1">
                                 <span className="font-extrabold text-slate-200 block truncate">{pl.name}</span>
-                                <span className="text-[9px] text-sky-400 font-mono block mt-0.5 truncate">{pl.url}</span>
-                                <span className="text-[8px] bg-slate-900 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-800 font-bold inline-block mt-1">
+                                <span className="text-[9px] text-sky-450 font-mono block mt-0.5 truncate">{pl.url}</span>
+                                <span className="text-[8px] bg-slate-900 text-emerald-450 px-1.5 py-0.5 rounded border border-slate-800 font-bold inline-block mt-1">
                                   {pl.count} Channels Loaded
                                 </span>
                               </div>
@@ -1540,7 +1597,7 @@ export default function App() {
                                   onClick={() => {
                                     handleDeletePlaylist(pl.name);
                                   }}
-                                  className="p-1 px-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded text-rose-400 cursor-pointer"
+                                  className="p-1 px-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded text-rose-450 cursor-pointer"
                                   title="অনলিস্ট ও রিমুভ করুন"
                                 >
                                   🗑️
@@ -1595,49 +1652,122 @@ export default function App() {
                         f.reset();
                         loadChannels();
                       }}
-                      className="flex flex-col gap-2.5 text-xs"
+                      className="grid grid-cols-1 gap-3 border-none animate-fade-in"
                     >
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          name="ch_name"
-                          type="text"
-                          placeholder="চ্যানেলের নাম (e.g. T-Sports Star Live)"
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                        />
-                        <input
-                          name="ch_src"
-                          type="text"
-                          placeholder="স্ট্রিম লিঙ্ক (.m3u8, .mpd, mp4 link)"
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono"
-                        />
-                        <input
-                          name="ch_logo"
-                          type="text"
-                          placeholder="লোগো ছবি লিঙ্ক (Optional logo URL)"
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-                        />
+                      <input
+                        name="ch_name"
+                        type="text"
+                        placeholder="চ্যানেলের নাম (e.g. T-Sports Star Live)"
+                        className="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none placeholder-slate-500"
+                      />
+                      <input
+                        name="ch_src"
+                        type="text"
+                        placeholder="স্ট্রিম লিংক (.m3u8, .mpd, mp4 link)"
+                        className="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none placeholder-slate-500"
+                      />
+                      <input
+                        name="ch_logo"
+                        type="text"
+                        placeholder="লোগো ছবি লিংক (Optional logo URL)"
+                        className="bg-slate-900 border border-slate-805 rounded p-2 text-xs text-slate-205 focus:outline-none placeholder-slate-500"
+                      />
+                      <div className="flex gap-2">
                         <select
                           name="ch_group"
-                          className="bg-slate-900 border border-slate-800 p-2 text-xs text-slate-300 focus:outline-none rounded-xl"
+                          className="bg-slate-900 border border-slate-805 rounded p-2 text-xs text-slate-205 focus:outline-none flex-1"
                         >
                           <option value="Sports">Sports (খেলাধুলা)</option>
                           <option value="Cricket">Cricket Feed</option>
                           <option value="Bangla">Bangla TV</option>
-                          <option value="Entertainment">বিনোদন (Entertainment)</option>
-                          <option value="News">সংবাদ (News)</option>
-                          <option value="Music">গান (Music)</option>
-                          <option value="Movies">চলচ্চিত্র (Movies)</option>
-                          <option value="Kids">কার্টুন (Kids)</option>
-                          <option value="Other">অন্যান্য (Other)</option>
+                          <option value="Entertainment">বিনোদন</option>
+                          <option value="News">সংবাদ</option>
                         </select>
+                        <button
+                          type="submit"
+                          className="bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[11px] px-4 py-2 rounded transition-all cursor-pointer shrink-0"
+                        >
+                          যোগ করুন ➕
+                        </button>
                       </div>
-                      <button
-                        type="submit"
-                        className="w-full bg-indigo-600 hover:bg-indigo-550 text-white font-extrabold text-[11px] py-2.5 rounded-xl transition-all cursor-pointer shadow-md hover:shadow-indigo-500/20 active:scale-95"
-                      >
-                        চ্যানেলটি যুক্ত করুন (Save Local Custom Channel) ➕
-                      </button>
                     </form>
+                  </div>
+                </div>
+
+                {/* BOTTOM COMPONENT FOR TV CHANNELS VIEW */}
+                <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 flex flex-col gap-3">
+                  {/* Channel list wrapper */}
+                  <div className="flex flex-col gap-3">
+                    <div className="max-h-[400px] overflow-y-auto border border-slate-950 bg-slate-950 rounded-2xl p-4 scrollbar-thin">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {channels.map((ch) => {
+                          const cleanUrl = ch.logo ? ch.logo.replace(/^https?:\/\//i, '') : '';
+                          const proxiedLogo = ch.logo ? (ch.logo.startsWith('data:') ? ch.logo : `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}`) : '';
+                          
+                          return (
+                            <div key={ch.id} className="bg-slate-900/40 border border-slate-850 rounded-2xl p-3.5 flex flex-col items-center justify-between relative group hover:border-sky-500/30 transition-all duration-300 min-h-[200px]">
+                              {/* Group tab top center */}
+                              <span className="absolute top-2 left-2 text-[8px] bg-slate-950 text-sky-455 border border-slate-800 rounded px-1.5 py-0.5 uppercase font-mono font-black tracking-tight leading-none">
+                                {ch.group}
+                              </span>
+
+                              {/* Circle logo display wrapper */}
+                              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-slate-950 p-1 border border-slate-800 relative mt-4 shrink-0 shadow-inner">
+                                {proxiedLogo ? (
+                                  <img
+                                    src={proxiedLogo}
+                                    alt={ch.name}
+                                    className="w-full h-full object-contain rounded-full group-hover:scale-105 transition-transform duration-300"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-sky-600 to-indigo-650 flex flex-col items-center justify-center text-white text-center p-1 uppercase font-bold text-[9px]">
+                                    <span className="truncate max-w-[45px]">{ch.name.substring(0, 3)}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Context texts */}
+                              <div className="w-full text-center mt-2.5">
+                                <span className="font-black text-slate-200 block truncate w-full text-xs leading-snug group-hover:text-sky-450 transition-colors">
+                                  {ch.name}
+                                </span>
+                                <span className="text-[7.5px] text-slate-500 block truncate w-full font-mono mt-0.5">
+                                  Src: {ch.playlistSource}
+                                </span>
+                              </div>
+
+                              {/* Operational Delete Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`আপনি কি সত্যিই "${ch.name}" চ্যানেলটি দর্শক ইন্টারফেস থেকে সাময়িকভাবে মুছে ফেলতে চান?`)) {
+                                    if (ch.isCustomAdded) {
+                                      // Remove from customs
+                                      const savedCustomRaw = localStorage.getItem('site_custom_channels');
+                                      const customs: any[] = savedCustomRaw ? JSON.parse(savedCustomRaw) : [];
+                                      const filtered = customs.filter(c => c.id !== ch.id);
+                                      localStorage.setItem('site_custom_channels', JSON.stringify(filtered));
+                                    } else {
+                                      // Put in deletedIds pool
+                                      const deletedIdsRaw = localStorage.getItem('site_deleted_channel_ids');
+                                      const deletedIds: string[] = deletedIdsRaw ? JSON.parse(deletedIdsRaw) : [];
+                                      deletedIds.push(ch.id);
+                                      localStorage.setItem('site_deleted_channel_ids', JSON.stringify(deletedIds));
+                                    }
+                                    alert('চ্যানেলটি সফলভাবে রিমুভ করা হয়েছে!');
+                                    loadChannels();
+                                  }
+                                }}
+                                className="mt-3 w-full py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-450 border border-slate-900 rounded-xl font-bold text-[9px] cursor-pointer transition-all uppercase tracking-wider text-center shrink-0"
+                              >
+                                মুছুন (Delete) 🗑️
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1658,7 +1788,7 @@ export default function App() {
                   {/* Channel list wrapper */}
                   <div className="flex flex-col gap-3">
                     <div className="max-h-[300px] overflow-y-auto border border-slate-900 rounded-xl bg-slate-950 p-2 space-y-1.5 scrollbar-thin font-sans text-xs">
-                      {channels.map((ch) => (
+                      {channels.map((ch) => { return (
                         <div key={ch.id} className="flex items-center justify-between p-2 hover:bg-slate-900/60 transition-colors rounded-xl border border-slate-900 text-xs gap-3">
                           <div className="flex items-center gap-2.5 truncate flex-1">
                             <span className="text-base">📺</span>
@@ -1695,7 +1825,7 @@ export default function App() {
                             মুছুন (Delete) 🗑️
                           </button>
                         </div>
-                      ))}
+                      )})}
                     </div>
 
                     {/* TRASH STORAGE ARCHIVE SECTION */}
@@ -2183,7 +2313,7 @@ export default function App() {
                                     const chatDb = chatDbRaw ? JSON.parse(chatDbRaw) : [];
                                     const filteredChats = chatDb.filter((m: any) => m.username !== r.reportedUser);
                                     localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredChats));
-                                  } catch(e){}
+                                  } catch (e) {}
 
                                   fetch('/api/reports/delete', {
                                     method: 'POST',
@@ -2214,7 +2344,7 @@ export default function App() {
                 </div>
 
                 {/* 4. LIVE CHAT POLL CONTROLLER FORM */}
-                <div className="p-4 bg-slate-950 border border-slate-850 rounded-2xl">
+                <div className="p-4 bg-slate-950 border border-slate-855 rounded-2xl">
                   <span className="text-xs font-black text-indigo-400 block mb-2 uppercase tracking-wide">🗳️ লাইভ চ্যাট পোল আপডেট করুন (Manage Live Poll Widget)</span>
                   
                   <form
@@ -2253,7 +2383,7 @@ export default function App() {
                           name="poll_q"
                           type="text"
                           defaultValue={pollQuestion}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none"
+                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-205 focus:outline-none"
                           placeholder="e.g. Which Team do you love?"
                         />
                       </div>
@@ -2263,7 +2393,7 @@ export default function App() {
                           name="poll_opts"
                           type="text"
                           defaultValue={pollOptions}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none"
+                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none"ssName="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none"
                           placeholder="Option1,Option2,Option3,Option4"
                         />
                       </div>
@@ -2339,14 +2469,7 @@ export default function App() {
                               alert(`ব্যবহারকারী @${usrUsername} সফলভাবে আনব্যান করা হয়েছে।`);
                             } else {
                               next = [...adminBannedUsers, usrUsername];
-                              // Automatically remove their messages from chat
-                              try {
-                                const chatDbRaw = localStorage.getItem('bongo_live_chat_messages_db');
-                                const chatDb = chatDbRaw ? JSON.parse(chatDbRaw) : [];
-                                const filteredChats = chatDb.filter((m: any) => m.username !== usrUsername);
-                                localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredChats));
-                              } catch(e){}
-                              alert(`ব্যবহারকারী @${usrUsername} ব্যান এবং তাদের মেসেজসমূহ অপসারণ করা হয়েছে!`);
+                              alert(`ব্যবহারকারী @${usrUsername} ব্যান করা হয়েছে।`);
                             }
                             setAdminBannedUsers(next);
                             localStorage.setItem('bongo_stream_banned_users', JSON.stringify(next));
@@ -2366,6 +2489,9 @@ export default function App() {
                             localStorage.setItem('bongo_stream_muted_users', JSON.stringify(next));
                             window.dispatchEvent(new Event('storage'));
                           };
+
+                          const activePres = onlinePresenceUsers.find((p: any) => p.username === usrUsername);
+                          const watchingText = activePres ? activePres.watchingChannel : '';
 
                           return (
                             <div key={usr.phone || usrUsername || i} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-850 rounded-xl gap-2 transition-all">
@@ -2393,6 +2519,13 @@ export default function App() {
                                 <span className="text-[9px] text-slate-500 block font-mono mt-0.5">
                                   Email: {usr.email} | Mobile: {usr.phone || 'N/A'} | Flag: {usr.flag || '🇧🇩'}
                                 </span>
+
+                                {watchingText && (
+                                  <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-450 bg-emerald-550/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg w-fit font-semibold">
+                                    <span className="w-1.5 h-1.5 bg-emerald-550 rounded-full animate-pulse shrink-0" />
+                                    <span>বর্তমানে দেখছেন: <strong className="text-emerald-400">{watchingText}</strong></span>
+                                  </div>
+                                )}
                               </div>
                               
                               <div className="flex items-center gap-1.5 font-sans shrink-0">
@@ -2613,6 +2746,19 @@ export default function App() {
                 <span>এডমিন প্যানেল</span>
               </button>
             )}
+
+            {/* Live Support Helpdesk Button with Pulsating dot if online */}
+            <button
+              onClick={() => setIsSupportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-[11px] font-bold cursor-pointer transition-all active:scale-95 text-emerald-400 select-none hover:text-emerald-300"
+              title="লাইভ সাপোর্ট হেল্পডেস্ক"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>লাইভ সাপোর্ট</span>
+              {supportEnabled && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" />
+              )}
+            </button>
             
             {/* Authenticated User state display */}
             {isLoggedIn && currentUser ? (
@@ -2781,7 +2927,7 @@ export default function App() {
                 <div className="flex flex-col gap-2.5 select-none">
                   {isChatOpen && (
                     <LiveChat
-                      channelGroup={selectedChannel.group}
+                      channelId={selectedChannel.id}
                       currentUser={currentUser}
                       isOpen={isChatOpen}
                       onClose={() => setIsChatOpen(false)}
@@ -3156,6 +3302,13 @@ export default function App() {
         onClose={() => setIsProfileEditOpen(false)}
         currentUser={currentUser}
         onSave={handleUpdateProfile}
+      />
+
+      {/* Live Help & Support Chat floating console overlay */}
+      <SupportChat
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        currentUser={currentUser}
       />
 
       {/* Dynamic APK & Version Update Check Notice Dialog */}

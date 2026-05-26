@@ -41,7 +41,7 @@ interface ChatMessage {
 }
 
 interface LiveChatProps {
-  channelGroup: string;
+  channelId: string;
   currentUser: { 
     name: string; 
     username: string; 
@@ -64,7 +64,7 @@ const PREMIUM_REACTIONS = [
   { tag: "[CHAMP_CUP]", label: "Champion Cup", emoji: "🏆", badge: "CHAMPION", style: "bg-gradient-to-r from-yellow-405 to-amber-600 shadow-md shadow-yellow-500/20 text-white" }
 ];
 
-export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }: LiveChatProps) {
+export default function LiveChat({ channelId, currentUser, isOpen, onClose }: LiveChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [showEmojiTray, setShowEmojiTray] = useState(false);
@@ -111,16 +111,22 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
   // Admin Verification state check
   const isCurrentAdmin = currentUser?.username === 'bongomember';
 
+  // Helpers for channel-specific storage/broadcasting
+  const storageKey = `bongo_live_chat_messages_db_${channelId}`;
+  const channelName = `bongo_live_chat_${channelId}`;
+
   // Load real-time messages from shared store & coordinate online spectator increments
   useEffect(() => {
-    const channel = new BroadcastChannel('bongo_live_chat');
+    const channel = new BroadcastChannel(channelName);
     
     const loadRealMessages = () => {
       try {
-        const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+        const dbRaw = localStorage.getItem(storageKey);
         if (dbRaw) {
           const db = JSON.parse(dbRaw);
           setMessages(db);
+        } else {
+          setMessages([]); // Clear messages when switching to a new channel
         }
       } catch (e) {
         console.error("Failed to load chat messages", e);
@@ -142,7 +148,7 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
     return () => {
       channel.close();
     };
-  }, [isOpen, channelGroup]);
+  }, [isOpen, channelId]);
 
   // Handle local state loading
   useEffect(() => {
@@ -157,18 +163,20 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
     } catch {
       // Fallback
     }
-  }, [channelGroup]);
+  }, [channelId]);
 
-  // Listen to any administrative changes on muting / pinning
+  // Listen to any changes on storage (pinned comments or message db)
   useEffect(() => {
     const handleStorageUpdate = (e: StorageEvent) => {
       if (e.key === 'chat_pinned_comment') {
         setPinnedMsg(e.newValue ? JSON.parse(e.newValue) : null);
+      } else if (e.key === storageKey) {
+        setMessages(e.newValue ? JSON.parse(e.newValue) : []);
       }
     };
     window.addEventListener('storage', handleStorageUpdate);
     return () => window.removeEventListener('storage', handleStorageUpdate);
-  }, []);
+  }, [storageKey]);
 
   // Autoscroll to bottom whenever message queue updates
   useEffect(() => {
@@ -325,17 +333,17 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
     };
 
     try {
-      const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+      const dbRaw = localStorage.getItem(storageKey);
       const db = dbRaw ? JSON.parse(dbRaw) : [];
       db.push(myMessage);
       if (db.length > 50) {
         db.shift();
       }
-      localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(db));
+      localStorage.setItem(storageKey, JSON.stringify(db));
       setMessages(db); // Successfully saved and updated
       
       // Sync across channels
-      const channel = new BroadcastChannel('bongo_live_chat');
+      const channel = new BroadcastChannel(channelName);
       channel.postMessage(db);
       channel.close();
       
@@ -380,10 +388,10 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
       
       // Filter out their messages from shared storage
       try {
-        const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+        const dbRaw = localStorage.getItem(storageKey);
         const db = dbRaw ? JSON.parse(dbRaw) : [];
         const filteredDb = db.filter((m: any) => m.username !== targetUsername);
-        localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredDb));
+        localStorage.setItem(storageKey, JSON.stringify(filteredDb));
         setMessages(filteredDb);
       } catch (e) {
         setMessages(p => p.filter(m => m.username !== targetUsername));
@@ -426,10 +434,10 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
 
     if (type === 'delete') {
       try {
-        const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+        const dbRaw = localStorage.getItem(storageKey);
         const db = dbRaw ? JSON.parse(dbRaw) : [];
         const filteredDb = db.filter((m: any) => m.id !== moderatingMessage.id);
-        localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredDb));
+        localStorage.setItem(storageKey, JSON.stringify(filteredDb));
         setMessages(filteredDb);
       } catch (e) {
         setMessages(p => p.filter(m => m.id !== moderatingMessage.id));
@@ -630,10 +638,10 @@ export default function LiveChat({ channelGroup, currentUser, isOpen, onClose }:
                       {msg.isMe && (
                         <button
                           onClick={() => {
-                            const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
+                            const dbRaw = localStorage.getItem(storageKey);
                             let db = dbRaw ? JSON.parse(dbRaw) : [];
                             db = db.filter((m: any) => m.id !== msg.id);
-                            localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(db));
+                            localStorage.setItem(storageKey, JSON.stringify(db));
                             setMessages(db);
                             window.dispatchEvent(new Event('storage'));
                           }}
