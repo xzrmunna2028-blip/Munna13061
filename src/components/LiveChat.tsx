@@ -113,40 +113,34 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
 
   // Helpers for channel-specific storage/broadcasting
   const storageKey = `bongo_live_chat_messages_db_${channelId}`;
-  const channelName = `bongo_live_chat_${channelId}`;
 
-  // Load real-time messages from shared store & coordinate online spectator increments
+  // Poll real-time messages from server API (multi-device active sync)
   useEffect(() => {
-    const channel = new BroadcastChannel(channelName);
-    
-    const loadRealMessages = () => {
-      try {
-        const dbRaw = localStorage.getItem(storageKey);
-        if (dbRaw) {
-          const db = JSON.parse(dbRaw);
-          setMessages(db);
-        } else {
-          setMessages([]); // Clear messages when switching to a new channel
-        }
-      } catch (e) {
-        console.error("Failed to load chat messages", e);
-      }
+    if (!isOpen) return;
+
+    const fetchMessages = () => {
+      fetch(`/api/stadium-chat/${channelId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setMessages(data);
+          }
+        })
+        .catch(err => console.error("Failed to poll server chat messages", err));
     };
 
-    loadRealMessages();
-    
-    channel.onmessage = (event) => {
-      setMessages(event.data);
-    };
+    // Initial fetch
+    fetchMessages();
 
-    // Trigger open chat audience count once on mount / open
-    if (isOpen) {
-      const counts = Number(localStorage.getItem('bongo_chat_open_counts') || '0');
-      localStorage.setItem('bongo_chat_open_counts', String(counts + 1));
-    }
-    
+    // Constant active poll every 2.5 seconds for snappy updates
+    const interval = setInterval(fetchMessages, 2500);
+
+    // Track active chat count
+    const counts = Number(localStorage.getItem('bongo_chat_open_counts') || '0');
+    localStorage.setItem('bongo_chat_open_counts', String(counts + 1));
+
     return () => {
-      channel.close();
+      clearInterval(interval);
     };
   }, [isOpen, channelId]);
 
@@ -165,13 +159,11 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
     }
   }, [channelId]);
 
-  // Listen to any changes on storage (pinned comments or message db)
+  // Listen to any changes on storage (pinned comments)
   useEffect(() => {
     const handleStorageUpdate = (e: StorageEvent) => {
       if (e.key === 'chat_pinned_comment') {
         setPinnedMsg(e.newValue ? JSON.parse(e.newValue) : null);
-      } else if (e.key === storageKey) {
-        setMessages(e.newValue ? JSON.parse(e.newValue) : []);
       }
     };
     window.addEventListener('storage', handleStorageUpdate);
@@ -319,43 +311,37 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
       return;
     }
 
-    const myMessage: ChatMessage = {
-      id: `my-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    const myMessage = {
       name: currentUser.name,
       username: currentUser.username,
       avatar: currentUser.avatar || '',
       flag: currentUser.flag || '🇧🇩',
       text: inputText.trim(),
       time: formatTime(new Date()),
-      isMe: true,
       isAdmin: isCurrentAdmin,
       replyTo: replyingTo ? { id: replyingTo.id, text: replyingTo.text, username: replyingTo.username } : undefined
     };
 
-    try {
-      const dbRaw = localStorage.getItem(storageKey);
-      const db = dbRaw ? JSON.parse(dbRaw) : [];
-      db.push(myMessage);
-      if (db.length > 50) {
-        db.shift();
+    // Post to server-backed chat controller
+    fetch(`/api/stadium-chat/${channelId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(myMessage)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && Array.isArray(data.messages)) {
+        setMessages(data.messages);
       }
-      localStorage.setItem(storageKey, JSON.stringify(db));
-      setMessages(db); // Successfully saved and updated
-      
-      // Sync across channels
-      const channel = new BroadcastChannel(channelName);
-      channel.postMessage(db);
-      channel.close();
-      
-    } catch (e) {
-      console.error("Failed to persist message", e);
-      // Still update local state, but persistence failed
-      setMessages(prev => [...prev, myMessage]);
-    }
+    })
+    .catch(err => {
+      console.error("Failed to post message", err);
+      // Client-side fallback if server fails
+      setMessages(prev => [...prev, { ...myMessage, id: `my-fallback-${Date.now()}` } as ChatMessage]);
+    });
     
     // Auto sync state for administrative settings trigger channel
     if (isCurrentAdmin) {
-      // Admin messages allow automatic pins if configured
       if (inputText.toLowerCase().startsWith('/pin ')) {
         const pinText = inputText.substring(5);
         const newPin = { text: pinText, author: currentUser.name, avatar: currentUser.avatar };
@@ -373,35 +359,52 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
     setInputText(prev => prev + " " + emojiTag + " ");
   };
 
-  // Handle Admin controls triggers
+  // Handle Admin controls triggers (connected directly to Server APIs)
   const handleAdminAction = (type: 'ban' | 'mute' | 'unban' | 'unmute' | 'pin' | 'delete') => {
     if (!moderatingMessage) return;
     const targetUsername = moderatingMessage.username;
 
     if (type === 'ban') {
+      // 1. Extreme ban server action: delete user chats from backend
+      fetch(`/api/stadium-chat/${channelId}/delete-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: targetUsername })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.messages) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(err => console.error("Error running ban user server action:", err));
+
+      // 2. Persist to ban list locally and server-side
       const banned = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
       if (!banned.includes(targetUsername)) {
         banned.push(targetUsername);
         localStorage.setItem('bongo_stream_banned_users', JSON.stringify(banned));
       }
-      alert(`ইউজার @${targetUsername} কে সফলভাবে ব্যান করা হয়েছে!`);
-      
-      // Filter out their messages from shared storage
-      try {
-        const dbRaw = localStorage.getItem(storageKey);
-        const db = dbRaw ? JSON.parse(dbRaw) : [];
-        const filteredDb = db.filter((m: any) => m.username !== targetUsername);
-        localStorage.setItem(storageKey, JSON.stringify(filteredDb));
-        setMessages(filteredDb);
-      } catch (e) {
-        setMessages(p => p.filter(m => m.username !== targetUsername));
-      }
+      fetch('/api/moderation/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bannedUsers: banned })
+      }).catch(err => console.error('Error syncing ban status:', err));
+
+      alert(`ইউজার @${targetUsername} কে সফলভাবে চ্যাট থেকে ব্যান ও নিষ্ক্রিয় করা হয়েছে!`);
     }
 
     if (type === 'unban') {
       const banned = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
       const filtered = banned.filter((u: string) => u !== targetUsername);
       localStorage.setItem('bongo_stream_banned_users', JSON.stringify(filtered));
+      
+      fetch('/api/moderation/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bannedUsers: filtered })
+      }).catch(err => console.error('Error syncing unban status:', err));
+
       alert(`ইউজার @${targetUsername} থেকে ব্যান প্রত্যাহার করা হয়েছে।`);
     }
 
@@ -411,6 +414,13 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
         muted.push(targetUsername);
         localStorage.setItem('bongo_stream_muted_users', JSON.stringify(muted));
       }
+
+      fetch('/api/moderation/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mutedUsers: muted })
+      }).catch(err => console.error('Error syncing mute status:', err));
+
       alert(`ইউজার @${targetUsername} কে সফলভাবে চ্যাটে মিউট করা হয়েছে।`);
     }
 
@@ -418,6 +428,13 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
       const muted = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
       const filtered = muted.filter((u: string) => u !== targetUsername);
       localStorage.setItem('bongo_stream_muted_users', JSON.stringify(filtered));
+
+      fetch('/api/moderation/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mutedUsers: filtered })
+      }).catch(err => console.error('Error syncing unmute status:', err));
+
       alert(`ইউজার @${targetUsername} থেকে মিউট প্রত্যাহার করা হয়েছে।`);
     }
 
@@ -433,16 +450,20 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
     }
 
     if (type === 'delete') {
-      try {
-        const dbRaw = localStorage.getItem(storageKey);
-        const db = dbRaw ? JSON.parse(dbRaw) : [];
-        const filteredDb = db.filter((m: any) => m.id !== moderatingMessage.id);
-        localStorage.setItem(storageKey, JSON.stringify(filteredDb));
-        setMessages(filteredDb);
-      } catch (e) {
-        setMessages(p => p.filter(m => m.id !== moderatingMessage.id));
-      }
-      alert('মেসেজটি চ্যাট বোর্ড থেকে অপসারণ করা হয়েছে!');
+      fetch(`/api/stadium-chat/${channelId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: moderatingMessage.id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.messages) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(err => console.error("Error executing message delete:", err));
+
+      alert('মেসেজটি চ্যাট বোর্ড থেকে সফলভাবে অপসারণ করা হয়েছে!');
     }
 
     setModeratingMessage(null);
@@ -493,7 +514,6 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
 
   if (!isOpen) return null;
 
-
   return (
     <div 
       id="live-stadium-chat-box"
@@ -503,11 +523,11 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
       <div className="bg-slate-955 border-b border-slate-850 px-4 py-2.5 flex items-center justify-between select-none">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
-          <h4 className="text-xs font-extrabold text-slate-105 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+          <h4 className="text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5 font-sans">
             <MessageSquare className="w-4 h-4 text-sky-400" />
             <span>Stadium Live Chat</span>
           </h4>
-          <span className="text-[10px] bg-sky-500/10 text-sky-450 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-sans flex items-center gap-1 font-bold">
+          <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-sans flex items-center gap-1 font-bold">
             <Users className="w-3 h-3 text-sky-400 shrink-0 animate-pulse" />
             <span>{onlineCount} Stadium Gfans</span>
           </span>
@@ -524,9 +544,6 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
         </button>
       </div>
 
-      {/* --- LIVE INTERACTIVE POLL DISPLAY ELEMENT --- */}
-      {/* [REMOVED AS PER REQUEST] */}
-
       {/* --- PINNED COMMENTS CONTAINER PANEL --- */}
       {pinnedMsg && (
         <div id="live-chat-pinned-box" className="bg-slate-950/90 border-b border-slate-850 px-3.5 py-2 flex items-start gap-2 select-none z-10">
@@ -540,7 +557,7 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
                 @{pinnedMsg.author}
               </span>
             </div>
-            <p className="text-[10px] text-slate-200 font-medium leading-relaxed mt-0.5 max-w-full">
+            <p className="text-[10px] text-slate-205 font-medium leading-relaxed mt-0.5 max-w-full">
               {renderMessageText(pinnedMsg.text)}
             </p>
           </div>
@@ -551,9 +568,9 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
                 localStorage.removeItem('chat_pinned_comment');
               }}
               title="পিন সরিয়ে ফেলুন"
-              className="text-slate-500 hover:text-rose-450 p-1 rounded hover:bg-slate-900 cursor-pointer"
+              className="text-slate-500 hover:text-rose-450 p-1 rounded hover:bg-slate-905 cursor-pointer"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3" />
             </button>
           )}
         </div>
@@ -574,78 +591,96 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
         ) : (
           messages.map((msg) => {
             const isMsgAdmin = msg.isAdmin || msg.username === 'fwcbdmember';
+            const isOwnMessage = currentUser && msg.username === currentUser.username;
             
             return (
               <div 
                 key={msg.id} 
                 onClick={() => setReplyingTo(msg)}
-                className={`py-1 px-1.5 hover:bg-slate-800/25 rounded text-xs leading-relaxed animate-fade-in group relative select-all transition-colors
-                  ${isMsgAdmin ? 'border-l-2 border-amber-500/80 bg-gradient-to-r from-amber-500/5 to-transparent' : ''}
+                className={`py-1.5 px-2 hover:bg-slate-800/40 rounded-xl text-xs leading-relaxed animate-fade-in group relative select-all transition-all duration-200 border border-transparent hover:border-slate-800/50
+                  ${isMsgAdmin ? 'border-l-2 border-amber-500 bg-gradient-to-r from-amber-500/5 to-transparent' : ''}
                 `}
               >
-                <div className="flex items-start flex-wrap gap-x-2 gap-y-1">
+                <div className="flex items-start gap-2.5 max-w-full">
                   {/* User Profile Details */}
                   <div className="shrink-0 mt-0.5" title={msg.username}>
                     {renderAvatar(msg.avatar, msg.name, isMsgAdmin)}
                   </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[9px] text-slate-500 font-mono select-none">
-                        {msg.time}
-                      </span>
-                      
-                      {/* Flag indicator icon */}
-                      <span className="text-xs select-none" title={`দেশ: ${msg.flag}`}>
-                        {msg.flag}
-                      </span>
+                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between gap-1.5 w-full select-none">
+                      <div className="flex items-center gap-1.5">
+                        {/* Username handle FIRST */}
+                        <span 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isMsgAdmin) return;
+                            if (isCurrentAdmin) {
+                              setModeratingMessage(msg);
+                            } else if (currentUser && msg.username !== currentUser.username) {
+                              setSelectedReportReason('হ্যারেজমেন্ট / কটূক্তি করা');
+                              setReportingMessage(msg);
+                            }
+                          }}
+                          className={`font-black tracking-wide cursor-pointer hover:underline inline-flex items-center gap-1 shrink-0 text-[11px] transition-all
+                            ${isMsgAdmin ? 'text-amber-400' : 'text-sky-400 hover:text-sky-305'}
+                          `}
+                        >
+                          {msg.name}
+                          {isMsgAdmin && (
+                            <span className="text-[7px] bg-amber-500/20 text-amber-400 px-1.5 py-0.2 rounded-full font-black uppercase tracking-widest animate-pulse border border-amber-500/35">ADMIN</span>
+                          )}
+                        </span>
 
-                      {/* Username handle */}
-                      <span 
-                        onClick={() => {
-                          if (isMsgAdmin) return;
-                          if (isCurrentAdmin) {
-                            setModeratingMessage(msg);
-                          } else if (currentUser && msg.username !== currentUser.username) {
-                            setSelectedReportReason('হ্যারেজমেন্ট / কটূক্তি করা');
-                            setReportingMessage(msg);
-                          }
-                        }}
-                        className={`font-semibold cursor-pointer hover:underline inline-flex items-center gap-0.5 shrink-0 text-[11px]
-                          ${isMsgAdmin ? 'text-amber-400 font-extrabold' : 'text-sky-400 font-bold'}
-                        `}
-                      >
-                        {msg.name}
-                        {isMsgAdmin && (
-                          <span className="text-[7px] bg-amber-500/20 text-amber-500 px-1 rounded font-black uppercase tracking-tighter">ADMIN</span>
+                        {/* Animated Flag indicator SECOND */}
+                        {msg.flag === '🇧🇩' ? (
+                          <span className="text-xs select-none inline-block hover:scale-130 transition-transform origin-center filter drop-shadow-[0_0_5px_rgba(16,185,129,0.9)] animate-pulse" title="বাংলা টাইগার্স সমর্থক">
+                            🇧🇩
+                          </span>
+                        ) : (
+                          <span className="text-xs select-none inline-block hover:scale-120 transition-transform" title={`দেশ: ${msg.flag}`}>
+                            {msg.flag}
+                          </span>
                         )}
+                      </div>
+
+                      {/* Time stamp far right */}
+                      <span className="text-[8px] text-slate-500 font-mono select-none">
+                        {msg.time}
                       </span>
                     </div>
 
-                    {/* Parsed horizontal content stream */}
-                    <div className="relative group/msg flex flex-col gap-1">
+                    {/* Chat Text area */}
+                    <div className="relative group/msg flex flex-col gap-1 max-w-full">
                       {msg.replyTo && (
-                        <div className="bg-slate-800/50 p-1.5 rounded text-[10px] text-slate-400 border-l-2 border-sky-500 mb-1">
+                        <div className="bg-slate-950/60 p-1.5 rounded-lg text-[10px] text-slate-400 border-l-2 border-sky-505 mb-1 max-w-full">
                           <p className="text-sky-300 font-bold">@{msg.replyTo.username}</p>
                           <p className="truncate">{msg.replyTo.text}</p>
                         </div>
                       )}
-                       <span className="text-slate-200 leading-normal font-sans tracking-wide break-words">
+                      <span className="text-slate-205 leading-normal font-sans tracking-wide break-words max-w-full">
                         {renderMessageText(msg.text)}
                       </span>
                       
-                      {/* Delete button for own messages */}
-                      {msg.isMe && (
+                      {/* Delete option */}
+                      {isOwnMessage && (
                         <button
-                          onClick={() => {
-                            const dbRaw = localStorage.getItem(storageKey);
-                            let db = dbRaw ? JSON.parse(dbRaw) : [];
-                            db = db.filter((m: any) => m.id !== msg.id);
-                            localStorage.setItem(storageKey, JSON.stringify(db));
-                            setMessages(db);
-                            window.dispatchEvent(new Event('storage'));
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fetch(`/api/stadium-chat/${channelId}/delete`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: msg.id })
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                              if (data.success && data.messages) {
+                                setMessages(data.messages);
+                              }
+                            })
+                            .catch(err => console.error("Error deleting msg:", err));
                           }}
-                          className="opacity-0 group-hover/msg:opacity-100 p-1 hover:bg-rose-950/50 rounded text-rose-500 cursor-pointer"
+                          className="absolute -right-1 bottom-0 opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-950/50 rounded-lg text-rose-500 cursor-pointer transition-opacity duration-150"
                           title="মেসেজ মুছুন"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -859,7 +894,7 @@ export default function LiveChat({ channelId, currentUser, isOpen, onClose }: Li
           placeholder={currentUser ? "প্রিমিয়াম ইমোজি সহ চ্যাট লিখুন..." : "ভেরিফাইড অ্যাকাউন্টে লগইন করে চ্যাট করুন..."}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          className="bg-slate-900 border border-slate-800 focus:border-sky-505/50 rounded-lg px-3 py-2 text-xs text-slate-250 outline-none flex-1 min-w-0"
+          className="bg-slate-900 border border-slate-800 focus:border-sky-505/50 rounded-lg px-3 py-2 text-base md:text-xs text-slate-250 outline-none flex-1 min-w-0"
           disabled={!currentUser}
         />
 

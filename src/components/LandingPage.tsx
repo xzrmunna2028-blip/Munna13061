@@ -58,7 +58,7 @@ export function StatsDisplay() {
 
 export function FreeWorldCupBDLogo({ className = "w-32 h-32" }: { className?: string }) {
   const customLogoUrl = localStorage.getItem('site_logo_url') || '';
-  const siteNameBangla = localStorage.getItem('site_name_bangla') || 'বিডি লাইভ টিভি';
+  const siteNameBangla = localStorage.getItem('site_name_bangla') || 'ফ্রী ওয়ার্ল্ড কাপ বিডি';
   const siteNameEnglish = localStorage.getItem('site_name_english') || 'Free World Cup BD';
 
   if (customLogoUrl) {
@@ -516,7 +516,7 @@ export default function LandingPage({
 }: LandingPageProps) {
   const [activeSlide, setActiveSlide] = useState<number>(0);
   const siteNameEnglish = localStorage.getItem('site_name_english') || 'Free World Cup BD';
-  const siteNameBangla = localStorage.getItem('site_name_bangla') || 'বিডি লাইভ টিভি';
+  const siteNameBangla = localStorage.getItem('site_name_bangla') || 'ফ্রী ওয়ার্ল্ড কাপ বিডি';
 
   // Auto rotate slide carousel interval (Changing exactly every 5 seconds)
   useEffect(() => {
@@ -720,59 +720,83 @@ export default function LandingPage({
 
       {/* QUICK CORE FEATURES HUB */}
       <section className="max-w-5xl w-full mx-auto px-4 md:px-6 pb-20 relative z-10">
-        <div className="text-center mb-10">
-          <h3 className="text-lg md:text-xl font-bold text-white tracking-tight">সর্বোত্তম খেলা সম্প্রচারের বিশেষ টেকনোলজিসমূহ</h3>
-          <p className="text-slate-450 text-xs font-sans mt-1">Free World Cup BD প্ল্যাটফর্মের সেরা ৩টি মূল স্তম্ভ</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-10"
+        >
+          <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">আমাদের সেরা মূল ৩টি টেকনোলজিসমূহ</h3>
+          <p className="text-slate-450 text-xs font-sans mt-1">সবচেয়ে ফাস্ট ও সচল কভারেজ উপভোগ করুন</p>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Feature 1 */}
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850/80 shadow-sm flex flex-col justify-between group">
+          {/* Feature 1 - Slide from Left */}
+          <motion.div 
+            initial={{ opacity: 0, x: -60 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850/80 shadow-sm flex flex-col justify-between group"
+          >
             <div>
               <div className="w-11 h-11 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-xl flex items-center justify-center mb-4">
                 <Languages className="w-5.5 h-5.5" />
               </div>
-              <h4 className="text-base font-bold text-slate-100">রিয়েল-টাইম ফুটবল স্কোরবোর্ড</h4>
+              <h4 className="text-base font-bold text-slate-100">রিয়েল-টাইম স্কোরবোর্ড</h4>
               <p className="text-xs text-slate-400 leading-relaxed font-sans mt-2">
-                লাইভ খেলা দেখার স্ক্রিনেই সরাসরি চলমান ম্যাচের সর্বশেষ রান রেট, স্কোর এবং খেলার সময় দেখে নিন। আলাদা কোনো অ্যাপ বা সাইট চেক করা লাগবে না।
+                লাইভ স্ক্রিনেই কোনো বাফারিং ছাড়াই প্রিয় দলগুলোর রানিং স্কোর আপডেট দেখে নিন।
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-900 text-xs text-sky-400 font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 cursor-pointer" onClick={onStartApp}>
               প্লেয়ারে দেখুন &rarr;
             </div>
-          </div>
+          </motion.div>
 
-          {/* Feature 2 */}
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850/80 shadow-sm flex flex-col justify-between group">
+          {/* Feature 2 - Slide from Bottom */}
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850/80 shadow-sm flex flex-col justify-between group"
+          >
             <div>
               <div className="w-11 h-11 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center mb-4">
                 <Smartphone className="w-5.5 h-5.5" />
               </div>
-              <h4 className="text-base font-bold text-slate-100">মোবাইল অ্যাপ ফ্রেন্ডলি ফাস্ট বাফারিং</h4>
+              <h4 className="text-base font-bold text-slate-100">অপ্টিমাইজড ফাস্ট বাফারিং</h4>
               <p className="text-xs text-slate-400 leading-relaxed font-sans mt-2">
-                বিশেষভাবে লো-ব্যান্ডউইথ ব্যবহারকারীদের জন্য অপ্টিমাইজড প্লেয়ার। আপনার ৩জি, ৪জি বা যেকোনো ব্রডব্যান্ড লাইনে থাকবে জিরো-লেভেল লেটেন্সি সম্প্রচার।
+                যেকোনো ৩জি বা ৪জি ইন্টারনেট কানেকশনে জিরো লেটেন্সি ও হাই কোয়ালিটি স্পিড।
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-900 text-xs text-emerald-400 font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 cursor-pointer" onClick={onStartApp}>
               প্লেয়ারে যান &rarr;
             </div>
-          </div>
+          </motion.div>
 
-          {/* Feature 3 */}
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850/80 shadow-sm flex flex-col justify-between group">
+          {/* Feature 3 - Slide from Right */}
+          <motion.div 
+            initial={{ opacity: 0, x: 60 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-850/80 shadow-sm flex flex-col justify-between group"
+          >
             <div>
               <div className="w-11 h-11 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl flex items-center justify-center mb-4">
                 <ShieldCheck className="w-5.5 h-5.5" />
               </div>
-              <h4 className="text-base font-bold text-slate-100">স্থায়ী ফেভারিট ও ফেইল্ড চ্যানেল লিস্ট</h4>
+              <h4 className="text-base font-bold text-slate-100">স্থায়ী ফেভারিট লিস্ট</h4>
               <p className="text-xs text-slate-400 leading-relaxed font-sans mt-2">
-                যেকোনো সচল চ্যানেলকে সহজেই স্টার ক্লিক করে প্রিয় করুন। একবার প্রিয় করা চ্যানেলগুলো কিংবা অফলাইন ফেইল্ড চ্যানেলগুলো স্থায়ীভাবে আপনার আইডিতে সেভ থাকবে।
+                সহজেই যেকোনো সচল চ্যানেল সেভ করে আপনার অ্যাকাউন্টে প্রিয় তালিকায় রাখুন।
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-900 text-xs text-amber-500 font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 cursor-pointer" onClick={onStartApp}>
               প্লেয়ারে দেখুন &rarr;
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -781,62 +805,92 @@ export default function LandingPage({
         <div className="bg-gradient-to-r from-emerald-950/20 via-slate-900/40 to-teal-950/20 border border-slate-800/80 rounded-3xl p-6 md:p-10 shadow-2xl backdrop-blur-md">
           <div className="flex flex-col md:flex-row gap-8 items-start">
             
-            {/* Left intro details */}
-            <div className="md:w-1/3 shrink-0">
+            {/* Left intro details - Slide from Left */}
+            <motion.div 
+              initial={{ opacity: 0, x: -70 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="md:w-1/3 shrink-0"
+            >
               <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                অফিসিয়াল নীতি ও সত্যতা
+                নীতি ও সত্যতা
               </span>
-              <h3 className="text-2xl md:text-3xl font-black text-white mt-4 leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-white mt-4 leading-tight">
                 প্ল্যাটফর্মের সত্যতা ও <br />নিরাপত্তা নীতিমালা
               </h3>
               <p className="text-xs text-slate-400 font-sans mt-3 leading-relaxed">
-                Free World Cup BD একটি শতভাগ নির্ভরযোগ্য এবং নিরাপদ আইপিটিভি পোর্টাল। আমাদের উদ্দেশ্য বিশ্বমানের নিরাপত্তা বজায় রেখে আপনাদের কাছে সেরা খেলার সম্প্রচার পৌঁছে দেওয়া।
+                Free World Cup BD একটি শতভাগ বিশ্বস্ত, নির্ভরযোগ্য এবং সম্পূর্ণ বাফারিং-ফ্রি উন্মুক্ত আইপিটিভি পোর্টাল।
               </p>
               <div className="mt-6 p-4 bg-slate-950/60 border border-slate-850 rounded-2xl flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
                   <ShieldCheck className="w-5.5 h-5.5" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-white">SSL এনক্রিপ্টেড ডাটা</p>
-                  <p className="text-[10px] text-slate-400 font-sans mt-0.5">১০০% সুরক্ষিত লাইভ ভিডিও ট্রাফিক প্রোটোকল</p>
+                  <p className="text-xs font-bold text-white">SSL এনক্রিপ্টেড</p>
+                  <p className="text-[10px] text-slate-400 font-sans mt-0.5">সুরক্ষিত ভিডিও ট্রাফিক প্রোটোকল</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Right side checklist grid */}
+            {/* Right side checklist grid - Elements Slide in from Right */}
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
               
               {/* Item 1 */}
-              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
-                <span className="text-amber-400 text-xs font-extrabold block">📡 সচল আইপিটিভি গ্যারান্টি (100% Live IPTV)</span>
+              <motion.div 
+                initial={{ opacity: 0, x: 60 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl"
+              >
+                <span className="text-amber-400 text-xs font-extrabold block">📡 সচল আইপিটিভি গ্যারান্টি</span>
                 <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
-                  আমরা সরাসরি প্রকাশকদের সচল ও উন্মুক্ত স্ট্রিম ডাটাবেজ ব্যবহার করি। সার্ভারের গতি ও ভিডিও স্ট্যাবিলিটি রক্ষার জন্য আমরা নিরবচ্ছিন্নভাবে ব্যাকএন্ড রিকোয়েস্ট মনিটর করে থাকি।
+                  সবচেয়ে দ্রুতগতির লাইভ ফিড ও সচল সার্ভার নিশ্চিত করতে রিয়াল-টাইম রিকোয়েস্ট মনিটর করা হয়।
                 </p>
-              </div>
+              </motion.div>
 
               {/* Item 2 */}
-              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
-                <span className="text-emerald-400 text-xs font-extrabold block">🔐 ডিক্রিপশন নিরাপত্তা (Data Protection)</span>
-                <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
-                  আমাদের চ্যানেল ডেটা ডিক্রিপশন এবং প্লেলিস্ট এপিআই সুরক্ষিত। আমরা কোনো ব্যবহারকারীর ব্যক্তিগত ডাটা সংরক্ষণ করি না। এটি সম্পূর্ণ সুরক্ষিত এবং ভাইরাসমুক্ত।
+              <motion.div 
+                initial={{ opacity: 0, x: 60 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl"
+              >
+                <span className="text-emerald-400 text-xs font-extrabold block">🔐 ১০০% নিরাপদ সংযোগ</span>
+                <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed font-sans">
+                  আমরা কোনো ব্যক্তিগত ডাটা সেভ করি না। আমাদের সকল কন্টেন্ট সম্পূর্ণ নিরাপদ।
                 </p>
-              </div>
+              </motion.div>
 
               {/* Item 3 */}
-              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
-                <span className="text-rose-400 text-xs font-extrabold block">❌ কোনো প্রতারণামূলক লিংক বা পেমেন্ট নেই</span>
+              <motion.div 
+                initial={{ opacity: 0, x: 60 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl"
+              >
+                <span className="text-rose-400 text-xs font-extrabold block">❌ কোনো প্রতারণা বা পেমেন্ট নেই</span>
                 <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
-                  Free World Cup BD সচল রাখতে আমরা তৃতীয় পক্ষের ক্ষতিকর বা পপআপ অ্যাড ব্যবহার থেকে বিরত থাকি। আমাদের সমস্ত কন্টেন্ট সম্পূর্ণ বিন্যামূল্যে সচল রাখা হয়।
+                  কোনো বিরক্তিকর পপআপ অ্যাড ছাড়াই সম্পূর্ণ বিনামূল্যে সবসময় খেলা দেখতে পারবেন।
                 </p>
-              </div>
+              </motion.div>
 
               {/* Item 4 */}
-              <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl">
-                <span className="text-sky-400 text-xs font-extrabold block">⚖️ ফেয়ার ইউজ ও কপিরাইট ক্লিয়ারেন্স (Fair Usage)</span>
+              <motion.div 
+                initial={{ opacity: 0, x: 60 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="bg-slate-950/40 border border-slate-900 p-4 rounded-xl"
+              >
+                <span className="text-sky-400 text-xs font-extrabold block">⚖️ ফেয়ার ইউজ ও কপিরাইট</span>
                 <p className="text-[11px] text-slate-300 font-semibold font-sans mt-1.5 leading-relaxed">
-                  আমরা অন্যান্য ডিস্ট্রিবিউটর বা অনলাইন আইপিটিভি সোর্স থেকে সংগৃহীত ডাটা প্রদর্শন করি। কোনো চ্যানেল মালিক যদি সম্প্রচার বন্ধ করতে চান, আমরা সাথে সাথে তা অপসারণ করি।
+                  আমরা ইন্টারনেট থেকে সংগৃহীত সোর্স দেখাই এবং চ্যানেল ওনারদের অনুরোধে যেকোনো ফিড অপসারণ করি।
                 </p>
-              </div>
+              </motion.div>
 
             </div>
 

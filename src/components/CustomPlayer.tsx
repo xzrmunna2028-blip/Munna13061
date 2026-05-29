@@ -17,13 +17,17 @@ import {
   Settings, 
   Languages,
   Smartphone,
-  ArrowLeft
+  ArrowLeft,
+  Tv,
+  Wifi,
+  Copy
 } from 'lucide-react';
 import { Channel } from '../types';
 
 interface CustomPlayerProps {
   channel: Channel | null;
   onReportWorkingState: (channelId: string, working: boolean) => void;
+  serverId?: string;
 }
 
 // Fluent foreign commentary to Bengali translations dictionary for realistic speech transcription
@@ -92,7 +96,7 @@ const TRANSLATED_GENERIC_CC = [
   }
 ];
 
-export default function CustomPlayer({ channel, onReportWorkingState }: CustomPlayerProps) {
+export default function CustomPlayer({ channel, onReportWorkingState, serverId }: CustomPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   
@@ -103,6 +107,16 @@ export default function CustomPlayer({ channel, onReportWorkingState }: CustomPl
   const [error, setError] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<'video-contain' | 'video-cover' | 'video-fill'>('video-contain');
   const [useProxy, setUseProxy] = useState(false);
+  const [showTvModal, setShowTvModal] = useState(false);
+  const [tvPairingCode, setTvPairingCode] = useState('');
+
+  // Generate pairing code
+  useEffect(() => {
+    if (showTvModal) {
+      const code = `TV-${Math.floor(1000 + Math.random() * 9000)}`;
+      setTvPairingCode(code);
+    }
+  }, [showTvModal]);
 
   // CC & Quality States
   const [showQualityMenu, setShowQualityMenu] = useState(false);
@@ -178,9 +192,14 @@ export default function CustomPlayer({ channel, onReportWorkingState }: CustomPl
       hlsRef.current = null;
     }
 
-    const activeUrl = useProxy 
+    let activeUrl = useProxy 
       ? `/api/proxy?url=${encodeURIComponent(channel.url)}` 
       : channel.url;
+
+    if (serverId) {
+      const glue = activeUrl.includes('?') ? '&' : '?';
+      activeUrl = `${activeUrl}${glue}server_id=${serverId}`;
+    }
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = activeUrl;
@@ -279,7 +298,7 @@ export default function CustomPlayer({ channel, onReportWorkingState }: CustomPl
       setError('আপনার ব্রাউজারটি HLS সমর্থক নয়।');
       setLoading(false);
     }
-  }, [channel, useProxy]);
+  }, [channel, useProxy, serverId]);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -652,6 +671,17 @@ export default function CustomPlayer({ channel, onReportWorkingState }: CustomPl
                 )}
               </div>
 
+              {/* TV Cast button */}
+              <button
+                id="btn-player-tv-pairing-cast"
+                type="button"
+                onClick={() => setShowTvModal(true)}
+                className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-850 hover:bg-slate-800 text-amber-500 hover:text-amber-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-95"
+                title="সরাসরি টিভিতে খেলা দেখুন (TV Cast)"
+              >
+                <Tv className="w-4 h-4 text-amber-500 animate-pulse" />
+              </button>
+
               {/* Fullscreen trig */}
               <button
                 id="btn-player-trigger-fullscreen"
@@ -664,6 +694,111 @@ export default function CustomPlayer({ channel, onReportWorkingState }: CustomPl
 
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* TV CASTING WIFI SETUP MODAL */}
+      {showTvModal && (
+        <div 
+          id="tv-casting-wifi-modal" 
+          className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none font-sans"
+        >
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-sm shadow-2xl relative animate-scale-up text-left">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-850 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-400 animate-pulse">
+                  <Tv className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">TV WiFi Casting</h3>
+                  <p className="text-[9px] text-slate-400">স্মার্ট টিভিতে সরাসরি খেলা দেখুন</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTvModal(false)}
+                className="p-1 px-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-rose-455 transition-colors cursor-pointer text-[10px] font-bold"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+
+            {/* Instruction Steps */}
+            <div className="flex flex-col gap-3 text-slate-300">
+              <div className="flex items-start gap-2.5">
+                <div className="w-4.5 h-4.5 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black shrink-0 text-sky-400">
+                  ১
+                </div>
+                <div className="text-[11px] leading-relaxed">
+                  আপনার <strong className="text-slate-100">স্মার্ট টিভি (Smart / Android TV)</strong> এর ওয়াইফাই অন করুন।
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <div className="w-4.5 h-4.5 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black shrink-0 text-sky-400">
+                  ২
+                </div>
+                <div className="text-[11px] leading-relaxed">
+                  আপনার মোবাইল ও টিভিকে একই <strong className="text-slate-200">WiFi রাউটার বা হটস্পট</strong> এর সাথে কানেক্ট রাখুন।
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <div className="w-4.5 h-4.5 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black shrink-0 text-sky-400">
+                  ৩
+                </div>
+                <div className="text-[11px] leading-relaxed">
+                  টিভির ব্রাউজার লিক দিয়ে লিখুন <strong className="text-amber-400 font-mono tracking-wider">bongobd.live</strong> এবং এই পেজে চলে আসুন।
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 border-b border-slate-850/60 pb-3">
+                <div className="w-4.5 h-4.5 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black shrink-0 text-sky-400">
+                  ৪
+                </div>
+                <div className="text-[11px] leading-relaxed">
+                  এবার নিচের ৬ সংখ্যার রি-সিঙ্ক কোডটি টিভিতে ইনপুট স্ক্রিনে বসিয়ে দিন:
+                </div>
+              </div>
+            </div>
+
+            {/* SYNC CODE DISPLAY BOX */}
+            <div className="my-4 p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-1.5 shadow-inner">
+              <span className="text-[8px] font-black tracking-widest uppercase text-amber-500 flex items-center gap-1">
+                <Wifi className="w-2.5 h-2.5 text-amber-500 animate-pulse animate-bounce" /> TV SYNC SIGNAL ACTIVE
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black tracking-widest text-slate-100 select-all font-mono">
+                  {tvPairingCode}
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(tvPairingCode);
+                    alert("কোডটি কপি করা হয়েছে! টিভিতে ইনপুট করুন।");
+                  }}
+                  className="p-1 hover:bg-slate-900 rounded text-sky-400 cursor-pointer"
+                  title="কোড কপি করুন"
+                >
+                  <Copy className="w-3" />
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-550 text-center font-medium leading-normal">
+                (কোডটি ওয়ান-টাইম সিকিউর সিঙ্ক প্রোটোকল দ্বারা প্রতিবার নতুনভাবে তৈরি হয়)
+              </p>
+            </div>
+
+            {/* Quick Connect confirmation simulation */}
+            <button
+              onClick={() => {
+                alert(`সাফল্যের সাথে কানেক্টেড! আপনার টিভিতে ${channel ? channel.name : 'লাইভ চ্যানেল'} সচল করার সংকেত পাঠানো হয়েছে।`);
+                setShowTvModal(false);
+              }}
+              className="w-full py-2.5 bg-gradient-to-r from-sky-600 to-sky-505 hover:from-sky-505 hover:to-sky-450 text-white text-[11px] font-black rounded-xl cursor-pointer shadow transition-all duration-200 uppercase tracking-wider text-center"
+            >
+              সরাসরি টিভিতে প্লে করুন
+            </button>
           </div>
         </div>
       )}

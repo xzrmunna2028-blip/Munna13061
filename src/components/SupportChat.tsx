@@ -31,12 +31,13 @@ interface TicketSession {
 }
 
 interface SupportChatProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   currentUser: { name: string; username: string } | null;
+  isInline?: boolean;
 }
 
-export default function SupportChat({ isOpen, onClose, currentUser }: SupportChatProps) {
+export default function SupportChat({ isOpen, onClose, currentUser, isInline = false }: SupportChatProps) {
   const [session, setSession] = useState<TicketSession | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -334,17 +335,11 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
     setMessages([]);
   };
 
-  if (!isOpen) return null;
+  if (!isInline && !isOpen) return null;
 
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg h-[90vh] md:h-[680px] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden flex flex-col shadow-2xl"
-        >
+  const renderChatInner = () => {
+    return (
+      <div className={`relative w-full h-full flex flex-col overflow-hidden text-left ${isInline ? 'bg-slate-900/40' : ''}`}>
           {/* Support Header */}
           <div className="px-5 py-4 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between select-none shrink-0">
             <div className="flex items-center gap-3">
@@ -387,12 +382,14 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
                   <span>রিবুট সেশন</span>
                 </button>
               )}
-              <button 
-                onClick={onClose}
-                className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer border border-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {!isInline && onClose && (
+                <button 
+                  onClick={onClose}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer border border-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -402,7 +399,7 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
               <AlertCircle className="w-12 h-12 text-amber-500 mb-3 animate-bounce" />
               <h5 className="text-white font-bold text-lg mb-1">লগইন প্রয়োজন</h5>
               <p className="text-slate-400 text-xs max-w-xs mb-4">
-                লাইভ চ্যাটে সাহায্য পেতে অনুগ্রহ করে প্রথমে আপনার বিডি লাইভ টিভি অ্যাকাউন্টে লগইন করুন।
+                লাইভ চ্যাটে সাহায্য পেতে অনুগ্রহ করে প্রথমে আপনার ফ্রী ওয়ার্ল্ড কাপ বিডি অ্যাকাউন্টে লগইন করুন।
               </p>
               <button 
                 onClick={onClose}
@@ -433,7 +430,7 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
                   ⚠️ আপনার কোন চ্যানেল বাফার করলে অনুগ্রহ করে প্লেয়ারের "রিফ্রেশ" বাটন ক্লিক করুন বা সার্ভার চ্যানেল লিংক পরিবর্তন করুন।
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-6">ধন্যবাদ আপনার ধৈর্যের জন্য! - বিডি লাইভ টিভি টিম</p>
+              <p className="text-[10px] text-slate-500 mt-6">ধন্যবাদ আপনার ধৈর্যের জন্য! - ফ্রী ওয়ার্ল্ড কাপ বিডি টিম</p>
             </div>
           ) : !session ? (
             /* --- WELCOME SCREEN / CHOOSE PROBLEM TO INITIATE TICKETS --- */
@@ -444,7 +441,7 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
                 </div>
                 <h5 className="text-white font-black text-lg mb-2">হ্যালো, {currentUser.name}!</h5>
                 <p className="text-slate-400 text-xs mb-8">
-                  বিডি লাইভ টিভিতে আপনার কোন সমস্যা হচ্ছে? সরাসরি চ্যাটে জানাতে নিচের যেকোনো একটি অপশন ক্লিক করে সেশন শুরু করুন।
+                  ফ্রী ওয়ার্ল্ড কাপ বিডিতে আপনার কোন সমস্যা হচ্ছে? সরাসরি চ্যাটে জানাতে নিচের যেকোনো একটি অপশন ক্লিক করে সেশন শুরু করুন।
                 </p>
 
                 <form onSubmit={handleCreateSession} className="text-left space-y-4">
@@ -702,7 +699,7 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isRecording}
                     placeholder={isRecording ? 'ভয়েস রেকর্ডিং একটিভ আছে...' : 'আপনার সমস্যার বিবরণ লিখুন...'}
-                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-w-0"
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-3 text-base md:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-w-0"
                   />
 
                   <button
@@ -718,6 +715,33 @@ export default function SupportChat({ isOpen, onClose, currentUser }: SupportCha
             </div>
           )}
 
+      </div>
+    );
+  };
+
+  if (isInline) {
+    return (
+      <div className="relative w-full h-[540px] lg:h-[calc(100vh-270px)] bg-slate-900 border border-slate-800/80 rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+        {renderChatInner()}
+      </div>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      <div 
+        className="fixed inset-0 z-[999] flex justify-end bg-black/40 backdrop-blur-xs transition-opacity duration-300 overflow-hidden w-full h-full"
+        onClick={onClose}
+      >
+        <motion.div 
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-md h-full bg-slate-900 border-l border-slate-800 flex flex-col shadow-2xl overflow-hidden"
+        >
+          {renderChatInner()}
         </motion.div>
       </div>
     </AnimatePresence>

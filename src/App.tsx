@@ -7,8 +7,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Tv, Search, Heart, RefreshCw, AlertCircle, Sparkles, Filter, 
   Flame, Radio, Info, Smartphone, Check, PlaySquare, X, ListFilter, HelpCircle,
-  LogIn, LogOut, User, ArrowLeft, Zap, SmartphoneNfc, MessageSquare, ShieldAlert, Lock
+  LogIn, LogOut, User, ArrowLeft, Zap, SmartphoneNfc, MessageSquare, ShieldAlert, Lock, ExternalLink,
+  Menu, Share2, Monitor, Download, AlertTriangle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Channel, PlaylistInfo } from './types';
 import CustomPlayer from './components/CustomPlayer';
 import ChannelCard from './components/ChannelCard';
@@ -18,6 +20,10 @@ import LiveChat from './components/LiveChat';
 import SupportChat from './components/SupportChat';
 import ProfileEditModal from './components/ProfileEditModal';
 import DynamicAdContainer from './components/DynamicAdContainer';
+import NoticeModal from './components/NoticeModal';
+import TelegramOnboarding from './components/TelegramOnboarding';
+import PartnerProgramModal from './components/PartnerProgramModal';
+
 
 // Available categories mapping Bengali and English
 interface GroupCategory {
@@ -64,8 +70,37 @@ export default function App() {
   const [channelHealth, setChannelHealth] = useState<Record<string, 'working' | 'broken'>>({});
 
   // Navigation page views & VIP custom layouts
-  const [currentPage, setCurrentPage] = useState<'landing' | 'app' | 'admin'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'app' | 'admin'>(() => {
+    return (localStorage.getItem('bongo_current_page') as any) || 'landing';
+  });
+
+  useEffect(() => {
+    if (currentPage) {
+      localStorage.setItem('bongo_current_page', currentPage);
+    }
+  }, [currentPage]);
+
+  const [rememberLast, setRememberLast] = useState<boolean>(() => {
+    return localStorage.getItem('site_remember_last') !== 'false';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('site_remember_last', rememberLast ? 'true' : 'false');
+    if (selectedChannel && selectedChannel.id) {
+      if (rememberLast) {
+        localStorage.setItem('bongo_selected_channel_id', selectedChannel.id);
+      } else {
+        localStorage.removeItem('bongo_selected_channel_id');
+      }
+    }
+  }, [selectedChannel, rememberLast]);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState<boolean>(false);
+  const [isCopyrightModalOpen, setIsCopyrightModalOpen] = useState<boolean>(false);
+
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<{ 
     name: string; 
@@ -87,13 +122,21 @@ export default function App() {
   useEffect(() => {
     const fetchSupportStatus = () => {
       fetch('/api/support/status')
-        .then(res => res.json())
+        .then(res => {
+          const contentType = res.headers.get('content-type');
+          if (res.ok && contentType && contentType.includes('application/json')) {
+            return res.json();
+          }
+          throw new Error('Response is not JSON or not OK');
+        })
         .then(data => {
           if (data && typeof data.supportEnabled === 'boolean') {
             setSupportEnabled(data.supportEnabled);
           }
         })
-        .catch(err => console.error('Error loading support status:', err));
+        .catch(err => {
+          // Silent fallback for non-JSON transients
+        });
     };
     fetchSupportStatus();
     const interval = setInterval(fetchSupportStatus, 8000);
@@ -107,13 +150,22 @@ export default function App() {
   useEffect(() => {
     const fetchReports = () => {
       fetch('/api/reports')
-        .then(res => res.json())
+        .then(res => {
+          const contentType = res.headers.get('content-type');
+          if (res.ok && contentType && contentType.includes('application/json')) {
+            return res.json();
+          }
+          throw new Error('Response is not JSON or not OK');
+        })
         .then(data => {
           if (Array.isArray(data)) {
             setReportsList(data);
           }
         })
-        .catch(err => console.error('Error fetching abuse reports:', err));
+        .catch(err => {
+          // Gracefully suppress logging of HTML/Network boot transients as severe errors
+          console.warn('Abuse reports status: server JSON endpoint not fully ready or returned non-JSON. Retrying shortly...');
+        });
     };
 
     fetchReports();
@@ -134,7 +186,13 @@ export default function App() {
   useEffect(() => {
     const checkVersion = () => {
       fetch('/api/version')
-        .then(res => res.json())
+        .then(res => {
+          const contentType = res.headers.get('content-type');
+          if (res.ok && contentType && contentType.includes('application/json')) {
+            return res.json();
+          }
+          throw new Error('Response is not JSON or not OK');
+        })
         .then(data => {
           if (data.version && data.version !== appVersion) {
             setIsUpdateBroadcastActive(true);
@@ -142,7 +200,9 @@ export default function App() {
             localStorage.setItem('latest_available_version', data.version);
           }
         })
-        .catch(err => console.error('Error checking version:', err));
+        .catch(err => {
+          // Silent fallback for non-JSON transients
+        });
     };
 
     checkVersion();
@@ -182,8 +242,11 @@ export default function App() {
   });
 
   // --- Horizontal Multi-Server selection framework states ---
+  const [activeServerId, setActiveServerId] = useState<string>(() => {
+    return localStorage.getItem('site_active_server_id') || '1';
+  });
   const [activeServer, setActiveServer] = useState<string>(() => {
-    return localStorage.getItem('site_active_server') || 'Singapore Edge Premium (WiFi 10G Feed)';
+    return localStorage.getItem('site_active_server') || 'Server 1 (High Speed)';
   });
   const [connectingServer, setConnectingServer] = useState<string>('');
 
@@ -194,6 +257,185 @@ export default function App() {
   const [isFavoriteTeamSelectionOpen, setIsFavoriteTeamSelectionOpen] = useState<boolean>(false);
   const [showIntroBumper, setShowIntroBumper] = useState<boolean>(false);
   const [bumperTeam, setBumperTeam] = useState<string>('');
+
+  // --- Dynamic Site Settings State (Server-backed dynamic engine) ---
+  const [siteSettings, setSiteSettings] = useState<{
+    maintenanceMode: boolean;
+    maintenanceMessage: string;
+    telegramUrl: string;
+    siteNameEnglish: string;
+    siteNameBangla: string;
+    marqueeText: string;
+    siteLogoUrl: string;
+    customAds: {
+      id: string;
+      title: string;
+      placement: 'top' | 'bottom' | 'popunder' | 'floating' | 'sidebar';
+      code: string;
+      active: boolean;
+    }[];
+  }>({
+    maintenanceMode: false,
+    maintenanceMessage: 'সাময়িকভাবে আমাদের ওয়েবসাইট এখন বন্ধ আছে। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন, দ্রুতই আবার চালু করা হবে!',
+    telegramUrl: 'https://t.me/FIFAWorldCupbd1',
+    siteNameEnglish: 'Free World Cup BD',
+    siteNameBangla: 'বিডি লাইভ টিভি',
+    marqueeText: 'স্বাগতম Free World Cup BD-তে!',
+    siteLogoUrl: '',
+    customAds: []
+  });
+
+  const [isNoticeOpen, setIsNoticeOpen] = useState<boolean>(false);
+  const [isTelegramOnboardingOpen, setIsTelegramOnboardingOpen] = useState<boolean>(false);
+
+  // Helpdesk Realtime Chat States
+  const [adminSupportSessions, setAdminSupportSessions] = useState<any[]>([]);
+  const [activeAdminSession, setActiveAdminSession] = useState<any | null>(null);
+  const [adminSupportReplyText, setAdminSupportReplyText] = useState<string>('');
+
+  const fetchSiteSettings = () => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setSiteSettings(data);
+          if (data.siteNameEnglish) {
+            setSiteNameEnglish(data.siteNameEnglish);
+            localStorage.setItem('site_name_english', data.siteNameEnglish);
+          }
+          if (data.siteNameBangla) {
+            setSiteNameBangla(data.siteNameBangla);
+            localStorage.setItem('site_name_bangla', data.siteNameBangla);
+          }
+          if (data.marqueeText) {
+            setMarqueeText(data.marqueeText);
+            localStorage.setItem('site_marquee_text', data.marqueeText);
+          }
+          if (data.siteLogoUrl !== undefined) {
+            setSiteLogoUrl(data.siteLogoUrl);
+            localStorage.setItem('site_logo_url', data.siteLogoUrl);
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching site settings:', err));
+  };
+
+  const saveSiteSettings = async (updatedFields: Partial<typeof siteSettings>) => {
+    try {
+      const workingSettings = { ...siteSettings, ...updatedFields };
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(workingSettings)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSiteSettings(data.settings);
+        return true;
+      }
+    } catch (e) {
+      console.error('Error saving site settings:', e);
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    fetchSiteSettings();
+    const intervalSettings = setInterval(fetchSiteSettings, 8000);
+
+    const syncModerationAndData = async () => {
+      try {
+        // 1. Fetch moderation lists
+        const modRes = await fetch('/api/moderation/status');
+        const modData = await modRes.json();
+        if (modData) {
+          if (Array.isArray(modData.verifiedUsers)) {
+            setAdminVerifiedUsers(modData.verifiedUsers);
+            localStorage.setItem('bongo_stream_verified_users', JSON.stringify(modData.verifiedUsers));
+          }
+          if (Array.isArray(modData.bannedUsers)) {
+            setAdminBannedUsers(modData.bannedUsers);
+            localStorage.setItem('bongo_stream_banned_users', JSON.stringify(modData.bannedUsers));
+          }
+          if (Array.isArray(modData.mutedUsers)) {
+            setAdminMutedUsers(modData.mutedUsers);
+            localStorage.setItem('bongo_stream_muted_users', JSON.stringify(modData.mutedUsers));
+          }
+        }
+
+        // 2. Fetch users and sync local storage
+        const usersRes = await fetch('/api/users');
+        const usersData = await usersRes.json();
+        if (usersData && Array.isArray(usersData.users)) {
+          localStorage.setItem('bongo_stream_users_db', JSON.stringify(usersData.users));
+        }
+
+        // 3. Fetch partners list
+        const partnersRes = await fetch('/api/partner/list');
+        const partnersData = await partnersRes.json();
+        if (partnersData && Array.isArray(partnersData.members)) {
+          setPartnerMembers(partnersData.members);
+        }
+      } catch (err) {
+        console.error('Error syncing real-time databases:', err);
+      }
+    };
+
+    // Immediate invocation
+    syncModerationAndData();
+    const intervalSync = setInterval(syncModerationAndData, 5000);
+
+    return () => {
+      clearInterval(intervalSettings);
+      clearInterval(intervalSync);
+    };
+  }, []);
+
+  // Sync local users to server database on initial startup
+  useEffect(() => {
+    try {
+      const dbRaw = localStorage.getItem('bongo_stream_users_db');
+      if (dbRaw) {
+        const users = JSON.parse(dbRaw);
+        if (users && users.length > 0) {
+          fetch('/api/users/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ users })
+          }).catch(err => console.error('Error syncing local users to server:', err));
+        }
+      }
+    } catch (e) {
+      console.error('Error in local users sync:', e);
+    }
+  }, []);
+
+  // Poll for live tickets when admin support tab is open
+  useEffect(() => {
+    if (currentPage !== 'admin' || adminActiveTab !== 'support') return;
+
+    const pullAdminSupport = () => {
+      fetch('/api/support/sessions')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setAdminSupportSessions(data);
+            if (activeAdminSession) {
+              const matched = data.find(s => s.id === activeAdminSession.id);
+              if (matched) {
+                setActiveAdminSession(matched);
+              }
+            }
+          }
+        })
+        .catch(err => console.error('Error fetching admin support sessions:', err));
+    };
+
+    pullAdminSupport();
+    const timer = setInterval(pullAdminSupport, 4000);
+    return () => clearInterval(timer);
+  }, [currentPage, adminActiveTab, activeAdminSession?.id]);
+
 
   // --- Strategic Sponsors Ad block configuration codes ---
   const [adCodes, setAdCodes] = useState({
@@ -601,6 +843,7 @@ export default function App() {
 
   // Real-time online users presences
   const [onlinePresenceUsers, setOnlinePresenceUsers] = useState<any[]>([]);
+  const [partnerMembers, setPartnerMembers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchOnlinePresences = () => {
@@ -685,6 +928,181 @@ export default function App() {
     setAppVersion(newVersion);
     setIsUpdating(false);
     window.location.reload();
+  };
+
+  const handleDownloadHTMLUserPanel = () => {
+    const channelsJson = JSON.stringify(channels, null, 2);
+    const htmlTemplate = `<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${siteNameBangla || 'Bongo Live Studio'}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Hls.js CDN for standalone video streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
+</head>
+<body class="text-slate-100 flex flex-col min-h-screen">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-600 to-amber-505 flex items-center justify-center font-bold text-white shadow-lg animate-pulse">
+                🎮
+            </div>
+            <div>
+                <h1 class="text-sm font-black tracking-wide text-white uppercase">${siteNameEnglish || 'Bongo Live'}</h1>
+                <p class="text-[9px] text-sky-404">রিয়েল-টাইম লাইভ স্পোর্টস ড্যাশবোর্ড</p>
+            </div>
+        </div>
+        <span class="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-sans animate-pulse font-bold font-sans">
+            🟢 STADIUM LIVE
+        </span>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Interactive Player Area -->
+        <section class="lg:col-span-2 flex flex-col gap-3">
+            <div class="bg-black/90 rounded-2xl overflow-hidden aspect-video relative border border-slate-800 shadow-2xl">
+                <video id="hls-video-player" class="w-full h-full object-contain" controls autoplay playsinline></video>
+                <div id="player-status-badge" class="absolute top-3 left-3 bg-red-600 text-white font-extrabold text-[9px] uppercase px-2 py-0.5 rounded-md tracking-wider flex items-center gap-1 shadow font-sans">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            
+            <div class="bg-slate-900 border border-slate-800/85 p-4 rounded-2xl flex flex-col gap-1 shadow bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900">
+                <span id="current-channel-tag" class="text-[9px] text-amber-500 font-extrabold uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded self-start font-sans">SELECT A CHANNEL</span>
+                <h2 id="current-channel-title" class="text-sm font-black text-slate-100 mt-1">প্লে করতে ডানদিকের তালিকা থেকে চ্যানেল বেছে নিন</h2>
+                <p class="text-[10px] text-slate-400 leading-relaxed font-sans mt-0.5">১০০% ফ্রি ও হাই-ডেফিনিশন লাইভ স্ট্রিমিং চ্যানেল, কোনো বিজ্ঞাপন ছাড়াই সরাসরি উপভোগ করুন।</p>
+            </div>
+        </section>
+
+        <!-- Dynamic Category/Channel Selector Sidebar -->
+        <section class="bg-slate-900 border border-slate-850 rounded-2xl p-4 flex flex-col gap-3 h-[420px] lg:h-auto overflow-hidden">
+            <div class="border-b border-slate-800 pb-2">
+                <h3 class="text-xs font-black text-slate-200 uppercase tracking-wide">লাইভ টিভি চ্যানেলসমূহ</h3>
+                <p class="text-[9px] text-slate-500">সিলেক্ট করতে চ্যানেল কার্ডে ক্লিক করুন</p>
+            </div>
+            
+            <div id="html-channels-scroll-track" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+                <!-- Channels will be populated here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- App Scripts and Mounting logic -->
+    <script>
+        const fallbackChannelsList = ${channelsJson};
+
+        let activeVideoPlayer = document.getElementById('hls-video-player');
+        let playerHls = null;
+
+        function loadChannelStream(streamUrl, name) {
+            document.getElementById('current-channel-title').innerText = name;
+            document.getElementById('current-channel-tag').innerText = "LIVE PLAYING";
+
+            if (Hls.isSupported()) {
+                if (playerHls) {
+                    playerHls.destroy();
+                }
+                playerHls = new Hls({
+                    maxBufferLength: 30,
+                    enableWorker: true,
+                    lowLatencyMode: true
+                });
+                playerHls.loadSource(streamUrl);
+                playerHls.attachMedia(activeVideoPlayer);
+                playerHls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    activeVideoPlayer.play().catch(e => console.log("Auto play prevented:", e));
+                });
+                playerHls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("Network error, retrying...");
+                                playerHls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("Media error, recovering...");
+                                playerHls.recoverMediaError();
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                });
+            } else if (activeVideoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                activeVideoPlayer.src = streamUrl;
+                activeVideoPlayer.addEventListener('loadedmetadata', function() {
+                    activeVideoPlayer.play().catch(e => console.log("Auto play prevented:", e));
+                });
+            }
+        }
+
+        // Initialize and build channels list
+        function bootstrapUserPanel() {
+            const listContainer = document.getElementById('html-channels-scroll-track');
+            listContainer.innerHTML = '';
+
+            if (!fallbackChannelsList || fallbackChannelsList.length === 0) {
+                listContainer.innerHTML = \`<div class="text-center text-slate-600 text-[11px] py-8">কোনো চ্যানেল পাওয়া যায়নি</div>\`;
+                return;
+            }
+
+            fallbackChannelsList.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "flex items-center gap-2.5 p-2 bg-slate-950/60 hover:bg-slate-800 hover:border-slate-700/80 rounded-xl border border-transparent transition-all duration-150 cursor-pointer select-none group";
+                card.onclick = () => loadChannelStream(item.streamUrl, item.name);
+
+                card.innerHTML = \`
+                    <div class="relative shrink-0 select-none">
+                        <img src="\${item.logo || 'https://images.unsplash.com/photo-1540747737956-378724044453?w=80&fit=crop'}" class="w-8 h-8 rounded-lg object-cover border border-slate-800" alt="logo" onerror="this.src='https://images.unsplash.com/photo-1540747737956-378724044453?w=80&fit=crop'" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-extrabold text-slate-100 group-hover:text-sky-400 transition-colors truncate">\${item.name}</p>
+                        <p class="text-[8px] text-slate-500 uppercase tracking-widest mt-0.5">\${item.category || 'Bangla'}</p>
+                    </div>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1 shrink-0"></span>
+                \`;
+
+                listContainer.appendChild(card);
+            });
+
+            // Auto play first channel initially
+            if (fallbackChannelsList.length > 0) {
+                const first = fallbackChannelsList[0];
+                loadChannelStream(first.streamUrl, first.name);
+            }
+        }
+
+        window.onload = bootstrapUserPanel;
+    </script>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlTemplate], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '${siteNameEnglish || "bongo_live"}_user_panel.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('অভিনন্দন! ডাব্লিউ৩ স্ট্যান্ডার্ড সিঙ্ক্রোনাইজড ইউজার প্যানেল স্ক্রিন ফাইল সফলভাবে ডাউনলোড হয়েছে।');
   };
 
   // Load stream health status & auth configurations from localStorage on initial load
@@ -893,10 +1311,16 @@ export default function App() {
         const activeList = mergedList.filter(c => !deletedIds.includes(c.id));
         setChannels(activeList);
         
-        // Auto-select the first verified/working channel if none is active
-        if (activeList.length > 0 && !selectedChannel) {
-          const firstVerified = activeList.find((c: Channel) => c.playlistSource.includes('Built-in')) || activeList[0];
-          setSelectedChannel(firstVerified);
+        // Restore selected channel from localStorage if present
+        if (activeList.length > 0) {
+          const savedChId = localStorage.getItem('bongo_selected_channel_id');
+          const restoredCh = activeList.find(c => c.id === savedChId);
+          if (restoredCh) {
+            setSelectedChannel(restoredCh);
+          } else if (!selectedChannel) {
+            const firstVerified = activeList.find((c: Channel) => c.playlistSource.includes('Built-in')) || activeList[0];
+            setSelectedChannel(firstVerified);
+          }
         }
       } else {
         throw new Error(data.error || 'চ্যানেল ডেটা লোড করার সময় বিভ্রাট দেখা দিয়েছে।');
@@ -1173,12 +1597,127 @@ export default function App() {
     );
   }
 
+  // Check if current logged-in user is banned on the server or locally
+  const isUserBanned = currentUser ? adminBannedUsers.includes(currentUser.username) : false;
+
+  if (isUserBanned) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans p-4 relative overflow-hidden">
+        {/* Subtle background red pulse glows */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-900/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-950/15 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20 pointer-events-none" />
+        
+        <div className="w-full max-w-md bg-slate-900 border border-rose-500/30 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-6 relative z-10 text-center animate-fade-in animate-none">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center mx-auto mb-2 text-rose-500 animate-bounce">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-extrabold text-white tracking-tight font-sans">আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে!</h1>
+            <p className="text-xs text-rose-450 font-semibold uppercase tracking-wider font-sans">Access Blocked & Suspended</p>
+          </div>
+          
+          <div className="p-4 bg-slate-950 border border-slate-850 rounded-2xl text-[11px] text-slate-305 space-y-3 leading-normal text-left font-sans">
+            <p>আপনার অ্যাকাউন্টটি <span className="text-rose-450 font-bold">@{currentUser.username}</span> আমাদের প্ল্যাটফর্মে নীতি লঙ্ঘন করার জন্য বা এডমিন প্যানেল থেকে সাময়িকভাবে ব্যান করা হয়েছে।</p>
+            <p className="border-t border-slate-850/60 pt-2 text-[10.5px]">এর সমাধান করতে অথবা আপিল করতে দয়া করে আমাদের অফিশিয়াল ফ্রী ওয়ার্ল্ড কাপ বিডি হোয়াটসঅ্যাপ নাম্বারে (+8801640227120) অথবা সাপোর্ট সেন্টারে যোগাযোগ করুন।</p>
+          </div>
+
+          <a 
+            href="tel:+8801640227120"
+            className="w-full py-3 text-rose-400 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 font-bold rounded-xl text-xs transition-transform active:scale-95 text-center flex items-center justify-center gap-2"
+          >
+            <span>সাপোর্ট নাম্বারে সরাসরি কল করুন</span>
+          </a>
+
+          <button
+            onClick={() => {
+              handleLogout();
+              window.location.reload();
+            }}
+            className="text-[11px] text-slate-500 hover:text-slate-400 font-extrabold underline cursor-pointer"
+          >
+            অন্য অ্যাকাউন্ট দিয়ে সাইন-ইন করুন
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Global Immersive Closed/Maintenance Mode overlay (Bypasses Admin to allow them to toggle back to active)
+  if (siteSettings.maintenanceMode && currentPage !== 'admin') {
+    return (
+      <div id="immersive-maintenance-takeover" className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4 md:p-8 bg-slate-950 text-slate-100 font-sans select-none overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-25 pointer-events-none" />
+        <div className="absolute top-[20%] left-[20%] w-[320px] h-[320px] bg-rose-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-[20%] right-[20%] w-[320px] h-[320px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative z-10 text-center animate-fade-in flex flex-col gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-450 animate-pulse animate-none">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          
+          <h2 className="text-lg md:text-xl font-black text-slate-100 tracking-tight leading-snug">সাময়িকভাবে আমাদের ওয়েবসাইট বন্ধ আছে</h2>
+          <p className="text-[10px] text-rose-400 font-sans font-extrabold tracking-widest uppercase">Maintenance Mode Active</p>
+          
+          <p className="text-xs text-slate-350 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-850">
+            {siteSettings.maintenanceMessage || 'সাময়িকভাবে আমাদের ওয়েবসাইট এখন বন্ধ আছে। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন, দ্রুতই আবার চালু করা হবে!'}
+          </p>
+
+          <p className="text-[11px] text-slate-400 leading-normal">
+            আমাদের অফিশিয়াল আপডেট ও কন্ডিশন জানতে সরাসরি টেলিগ্রাম চ্যানেলে জয়েন করুন।
+          </p>
+
+          <a 
+            href={siteSettings.telegramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 bg-gradient-to-r from-sky-505 to-sky-600 hover:from-sky-450 hover:to-sky-550 text-white font-extrabold text-xs rounded-xl cursor-pointer transition-all active:scale-95 text-center flex items-center justify-center gap-2 shadow-lg hover:shadow-sky-500/10"
+          >
+            <span>টেলিগ্রাম চ্যানেলে জয়েন করুন</span>
+            <ExternalLink className="w-3.5 h-3.5 text-white/80" />
+          </a>
+
+          {/* Hidden Admin Login Gateway trigger - double click to escape maintenance lock */}
+          <div className="mt-4 pt-3 border-t border-slate-850/40">
+            <button 
+              onClick={() => setCurrentPage('admin')}
+              className="text-[9px] text-slate-600 hover:text-slate-500 uppercase tracking-widest font-mono cursor-pointer transition-colors"
+            >
+              System Admin Gateway Entry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (currentPage === 'landing') {
     return (
       <div id="bongo-routing-landing-wrapper">
         <LandingPage
-          onStartApp={() => setCurrentPage('app')}
-          onOpenLogin={() => setIsAuthOpen(true)}
+          onStartApp={() => {
+            if (!isLoggedIn) {
+              let guestId = localStorage.getItem('bongo_guest_username');
+              if (!guestId) {
+                guestId = 'guest_' + Math.floor(Math.random() * 1000000);
+                localStorage.setItem('bongo_guest_username', guestId);
+              }
+              const guestName = 'ব্যবহারকারী ' + guestId.substring(6);
+              const guestUser = {
+                username: guestId,
+                name: guestName,
+                badge: 'GUEST_VIP',
+                avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${guestId}`
+              };
+              localStorage.setItem('bongo_stream_logged_in', 'true');
+              localStorage.setItem('bongo_stream_user_cfg', JSON.stringify(guestUser));
+              setCurrentUser(guestUser);
+              setIsLoggedIn(true);
+            }
+            setIsTelegramOnboardingOpen(true);
+          }}
+          onOpenLogin={() => setIsNoticeOpen(true)}
           onOpenAdmin={() => setCurrentPage('admin')}
           isLoggedIn={isLoggedIn}
           currentUser={currentUser}
@@ -1192,13 +1731,27 @@ export default function App() {
           onClose={() => setIsAuthOpen(false)}
           onLoginSuccess={handleLoginSuccess}
         />
+        <NoticeModal
+          isOpen={isNoticeOpen}
+          onClose={() => setIsNoticeOpen(false)}
+          siteNameEnglish={siteNameEnglish}
+          siteNameBangla={siteNameBangla}
+        />
+        <TelegramOnboarding
+          isOpen={isTelegramOnboardingOpen}
+          onClose={() => {
+            setIsTelegramOnboardingOpen(false);
+            setCurrentPage('app');
+          }}
+          telegramUrl={siteSettings.telegramUrl}
+        />
       </div>
     );
   }
 
   if (currentPage === 'admin' && !isAdminAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans p-4 relative">
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans p-4 relative overflow-x-hidden max-w-full w-full">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20 pointer-events-none" />
         <div className="w-full max-w-sm bg-slate-900 border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-6 relative z-10 animate-fade-in">
           <div className="text-center select-none">
@@ -1257,7 +1810,7 @@ export default function App() {
 
   if (currentPage === 'admin') {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative selection:bg-sky-500/35 selection:text-white bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/40 via-slate-950 to-slate-950">
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative selection:bg-sky-500/35 selection:text-white bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/40 via-slate-950 to-slate-950 overflow-x-hidden max-w-full w-full">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20 pointer-events-none" />
         
         {/* Floating Top Header */}
@@ -1696,268 +2249,290 @@ export default function App() {
 
                 {/* BOTTOM COMPONENT FOR TV CHANNELS VIEW */}
                 <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 flex flex-col gap-3">
-                  {/* Channel list wrapper */}
-                  <div className="flex flex-col gap-3">
-                    <div className="max-h-[400px] overflow-y-auto border border-slate-950 bg-slate-950 rounded-2xl p-4 scrollbar-thin">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {channels.map((ch) => {
-                          const cleanUrl = ch.logo ? ch.logo.replace(/^https?:\/\//i, '') : '';
-                          const proxiedLogo = ch.logo ? (ch.logo.startsWith('data:') ? ch.logo : `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}`) : '';
-                          
-                          return (
-                            <div key={ch.id} className="bg-slate-900/40 border border-slate-850 rounded-2xl p-3.5 flex flex-col items-center justify-between relative group hover:border-sky-500/30 transition-all duration-300 min-h-[200px]">
-                              {/* Group tab top center */}
-                              <span className="absolute top-2 left-2 text-[8px] bg-slate-950 text-sky-455 border border-slate-800 rounded px-1.5 py-0.5 uppercase font-mono font-black tracking-tight leading-none">
-                                {ch.group}
-                              </span>
-
-                              {/* Circle logo display wrapper */}
-                              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-slate-950 p-1 border border-slate-800 relative mt-4 shrink-0 shadow-inner">
-                                {proxiedLogo ? (
-                                  <img
-                                    src={proxiedLogo}
-                                    alt={ch.name}
-                                    className="w-full h-full object-contain rounded-full group-hover:scale-105 transition-transform duration-300"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-sky-600 to-indigo-650 flex flex-col items-center justify-center text-white text-center p-1 uppercase font-bold text-[9px]">
-                                    <span className="truncate max-w-[45px]">{ch.name.substring(0, 3)}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Context texts */}
-                              <div className="w-full text-center mt-2.5">
-                                <span className="font-black text-slate-200 block truncate w-full text-xs leading-snug group-hover:text-sky-450 transition-colors">
-                                  {ch.name}
-                                </span>
-                                <span className="text-[7.5px] text-slate-500 block truncate w-full font-mono mt-0.5">
-                                  Src: {ch.playlistSource}
-                                </span>
-                              </div>
-
-                              {/* Operational Delete Button */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (window.confirm(`আপনি কি সত্যিই "${ch.name}" চ্যানেলটি দর্শক ইন্টারফেস থেকে সাময়িকভাবে মুছে ফেলতে চান?`)) {
-                                    if (ch.isCustomAdded) {
-                                      // Remove from customs
-                                      const savedCustomRaw = localStorage.getItem('site_custom_channels');
-                                      const customs: any[] = savedCustomRaw ? JSON.parse(savedCustomRaw) : [];
-                                      const filtered = customs.filter(c => c.id !== ch.id);
-                                      localStorage.setItem('site_custom_channels', JSON.stringify(filtered));
-                                    } else {
-                                      // Put in deletedIds pool
-                                      const deletedIdsRaw = localStorage.getItem('site_deleted_channel_ids');
-                                      const deletedIds: string[] = deletedIdsRaw ? JSON.parse(deletedIdsRaw) : [];
-                                      deletedIds.push(ch.id);
-                                      localStorage.setItem('site_deleted_channel_ids', JSON.stringify(deletedIds));
-                                    }
-                                    alert('চ্যানেলটি সফলভাবে রিমুভ করা হয়েছে!');
-                                    loadChannels();
-                                  }
-                                }}
-                                className="mt-3 w-full py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-450 border border-slate-900 rounded-xl font-bold text-[9px] cursor-pointer transition-all uppercase tracking-wider text-center shrink-0"
-                              >
-                                মুছুন (Delete) 🗑️
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                    <span className="text-xs font-black text-slate-300 uppercase tracking-wide font-sans">📦 কাস্টম চ্যানেল তালিকা ({channels.filter(c => c.isCustomAdded).length} টি)</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('আপনি কি সত্যিই সমস্ত কাস্টম চ্যানেল মুছে দিতে চান?')) {
+                          localStorage.removeItem('site_custom_channels');
+                          alert('সমস্ত কাস্টম চ্যানেল মুছে দেওয়া হয়েছে!');
+                          loadChannels();
+                        }
+                      }}
+                      className="text-[9px] text-red-400 hover:text-red-300 font-bold bg-rose-500/5 hover:bg-rose-500/10 border border-rose-950 px-2 py-0.5 rounded cursor-pointer transition-all"
+                    >
+                      ক্লিয়ার কাস্টম চ্যানেল
+                    </button>
                   </div>
-                </div>
-
-                {/* BOTTOM COMPONENT FOR TV CHANNELS VIEW */}
-                <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-5 flex flex-col gap-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-900 pb-3">
-                    <div>
-                      <span className="text-xs font-black text-slate-300 uppercase block tracking-wider">📺 লাইভ চ্যানেল ডাটাবেজ অ্যাড্রেস ও গ্লোবাল রিমুভাল কন্ট্রোল</span>
-                      <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
-                        প্রয়োজনে যেকোনো চ্যানেল মুছে দিতে (Delete) ক্লিক করুন, সেটি দর্শকরা আর কখনো দেখতে পাবে না।
-                      </span>
-                    </div>
-                    <span className="text-[10px] bg-slate-900 text-teal-400 px-2.5 py-1 rounded border border-slate-800 font-mono">
-                      Total Channels: {channels.length} Active
-                    </span>
-                  </div>
-
-                  {/* Channel list wrapper */}
-                  <div className="flex flex-col gap-3">
-                    <div className="max-h-[300px] overflow-y-auto border border-slate-900 rounded-xl bg-slate-950 p-2 space-y-1.5 scrollbar-thin font-sans text-xs">
-                      {channels.map((ch) => { return (
-                        <div key={ch.id} className="flex items-center justify-between p-2 hover:bg-slate-900/60 transition-colors rounded-xl border border-slate-900 text-xs gap-3">
-                          <div className="flex items-center gap-2.5 truncate flex-1">
-                            <span className="text-base">📺</span>
+                  
+                  <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                    {channels.filter(c => c.isCustomAdded).length === 0 ? (
+                      <p className="text-[11px] text-slate-500 italic p-4 text-center font-sans">কোনো কাস্টম চ্যানেল এড করা নেই।</p>
+                    ) : (
+                      channels.filter(c => c.isCustomAdded).map((ch) => (
+                        <div key={ch.id} className="flex items-center justify-between bg-slate-900/30 border border-slate-900 p-2 rounded-xl text-xs font-sans">
+                          <div className="flex items-center gap-2 truncate">
+                            <img src={ch.logo} className="w-5 h-5 rounded object-cover shrink-0" alt="" referrerPolicy="no-referrer" />
                             <div className="truncate">
-                              <span className="font-extrabold text-slate-200 block truncate max-w-[280px]">{ch.name}</span>
-                              <span className="text-[8.5px] text-slate-400 font-mono block mt-0.5 max-w-[340px] truncate">
-                                Group: {ch.group} | Source: {ch.playlistSource}
-                              </span>
+                              <span className="font-extrabold text-slate-205 block truncate">{ch.name}</span>
+                              <span className="text-[8px] text-slate-500 block truncate font-mono">{ch.url}</span>
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => {
-                              if (window.confirm(`আপনি কি সত্যিই "${ch.name}" চ্যানেলটি দর্শক ইন্টারফেস থেকে সাময়িকভাবে মুছে ফেলতে চান?`)) {
-                                if (ch.isCustomAdded) {
-                                  // Remove from customs
-                                  const savedCustomRaw = localStorage.getItem('site_custom_channels');
-                                  const customs: any[] = savedCustomRaw ? JSON.parse(savedCustomRaw) : [];
-                                  const filtered = customs.filter(c => c.id !== ch.id);
-                                  localStorage.setItem('site_custom_channels', JSON.stringify(filtered));
-                                } else {
-                                  // Put in deletedIds pool
-                                  const deletedIdsRaw = localStorage.getItem('site_deleted_channel_ids');
-                                  const deletedIds: string[] = deletedIdsRaw ? JSON.parse(deletedIdsRaw) : [];
-                                  deletedIds.push(ch.id);
-                                  localStorage.setItem('site_deleted_channel_ids', JSON.stringify(deletedIds));
-                                }
-                                alert('চ্যানেলটি সফলভাবে রিমুভ করা হয়েছে!');
+                              if (window.confirm(`আপনি কি "${ch.name}" channelটি মুছে ফেলতে চান?`)) {
+                                const savedCustomRaw = localStorage.getItem('site_custom_channels');
+                                const currentCustoms = savedCustomRaw ? JSON.parse(savedCustomRaw) : [];
+                                const updated = currentCustoms.filter((c) => c.id !== ch.id);
+                                localStorage.setItem('site_custom_channels', JSON.stringify(updated));
+                                alert('চ্যানেলটি ডিলিট করা হয়েছে!');
                                 loadChannels();
                               }
                             }}
-                            className="p-1 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-950/20 rounded-lg font-bold text-[9px] cursor-pointer transition-all shrink-0 uppercase tracking-tight"
+                            className="text-[9px] text-rose-450 hover:text-rose-400 p-1 px-2 hover:bg-rose-500/5 border border-rose-955 rounded cursor-pointer transition-colors"
                           >
-                            মুছুন (Delete) 🗑️
+                            মুছুন 🗑️
                           </button>
                         </div>
-                      )})}
-                    </div>
-
-                    {/* TRASH STORAGE ARCHIVE SECTION */}
-                    <div className="border-t border-slate-900 pt-3.5 mt-1.5">
-                      <span className="text-[10px] font-black text-rose-400 block mb-2 uppercase tracking-widest flex items-center gap-1.5 select-none">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
-                        🗑️ মুছে ফেলা চ্যানেল ও ক্যাশে আর্কাইভ (Trash Storage Archive)
-                      </span>
-                      {(() => {
-                        const deletedIdsRaw = localStorage.getItem('site_deleted_channel_ids');
-                        const deletedIds: string[] = deletedIdsRaw ? JSON.parse(deletedIdsRaw) : [];
-                        
-                        if (deletedIds.length === 0) {
-                          return <p className="text-[10px] text-slate-500 italic">কোনো ডিলিটেড চ্যানেল ট্র্যাশ কন্টেইনারে অবশিষ্ট নেই।</p>;
-                        }
-
-                        return (
-                          <div className="flex flex-wrap gap-1.5">
-                            {deletedIds.map((id) => (
-                              <div key={id} className="inline-flex items-center gap-2 bg-slate-950/90 border border-rose-950/20 text-[10px] p-1.5 px-3 rounded-xl hover:border-rose-900/40 transition-all shadow-sm">
-                                <span className="text-slate-400 font-mono text-[9px]">ID: {id.substring(0, 10)}...</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const filtered = deletedIds.filter(dId => dId !== id);
-                                    localStorage.setItem('site_deleted_channel_ids', JSON.stringify(filtered));
-                                    alert('অভিনন্দন! চ্যানেলটি প্লেয়ারে রিকভার করা হয়েছে!');
-                                    loadChannels();
-                                  }}
-                                  className="text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-0.5 cursor-pointer text-[9px] uppercase tracking-wider transition-all"
-                                >
-                                  রিকভার (Restore) 🔄
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
             )}
-              {/* TAB 3: SPONSOR ADS CONTROL */}
+
+            {/* TAB 3: ADVERTISING MANAGER */}
             {adminActiveTab === 'ads' && (
-              <div className="flex flex-col gap-5 animate-fade-in font-sans">
+              <div className="flex flex-col gap-5 animate-fade-in font-sans text-slate-200">
                 <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-                  <span className="text-xs font-black text-slate-300 uppercase tracking-wide">💼 বিজ্ঞাপন স্ক্রিপ্ট ম্যানেজার (HTML / JS Script Placements)</span>
-                  <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-bold uppercase select-none">LIVE EVALUATION</span>
+                  <span className="text-xs font-black text-slate-300 uppercase tracking-wide">💼 বিজ্ঞাপন স্ক্রিপ্ট ও কাস্টম এডস প্ল্যাটফর্ম</span>
+                  <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-bold uppercase select-none">DYNAMIC ACTIVE</span>
                 </div>
 
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  এখানে আপনি আপনার <strong>Adsterra, Google AdSense, RevenueHits</strong> বা যেকোনো এড নেটওয়ার্কের সম্পূর্ণ বিজ্ঞাপন কোড (HTML, iframe, or Javascript Code) পেস্ট করতে পারেন। কোনো কোড ফাকা বা খালি থাকলে সাইটে কোনো ব্যানার বা প্লেসহোল্ডার টেক্সট প্রদর্শিত হবে না।
+                <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+                  এখানে আপনি আপনার <strong>Adsterra, Google AdSense, RevenueHits</strong> বা যেকোনো এড নেটওয়ার্কের বিজ্ঞাপন বসাতে পারেন। প্লাস (+) বাটনে ক্লিক করে আনলিমিটেড অ্যাড তৈরি করুন এবং প্রতিটি বক্সে আলাদা অন/অফ সুইচ দিয়ে নিয়ন্ত্রণ করুন।
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Billboard Top Banner script editor */}
-                  <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
-                    <span className="text-xs font-extrabold text-slate-200 block font-sans tracking-tight">১. হেডার ল্যান্ডস্কেপ ব্যানার কোড (Billboard Top Banner Script)</span>
-                    <span className="text-[9.5px] text-slate-500 block leading-tight">অনুসন্ধান বাটন ও ঘোষণার ঠিক উপরে প্রদর্শিত হবে।</span>
-                    <textarea
-                      value={adCodes.topBanner}
-                      onChange={(e) => setAdCodes(p => ({ ...p, topBanner: e.target.value }))}
-                      rows={4}
-                      placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
-                      className="w-full bg-slate-900 border border-slate-805 rounded-xl p-2.5 text-2xs font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
-                    />
-                  </div>
+                {/* PLUS BUTTON FORM TO CREATE UNLIMITED ADS */}
+                <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-3.5 mb-2 relative">
+                  <span className="text-xs font-black text-emerald-400 uppercase tracking-widest block font-sans">📥 নতুন বিজ্ঞাপন ইউনিট সংযোজন (Create New Ad Box)</span>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] uppercase text-slate-400 font-bold block mb-1 font-sans">বিজ্ঞাপনের নাম (Internal Name)</label>
+                      <input
+                        id="new-ad-title"
+                        type="text"
+                        placeholder="e.g. Adsterra Direct Header Banner"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-505 font-sans"
+                      />
+                    </div>
 
-                  {/* Bottom sponsor script editor */}
-                  <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
-                    <span className="text-xs font-extrabold text-slate-200 block font-sans tracking-tight">২. ফুটার বিজ্ঞাপন ব্যানার কোড (Footer Bottom Banner Script)</span>
-                    <span className="text-[9.5px] text-slate-505 block leading-tight">চ্যানেল গ্রিড টেবিলের ঠিক নিচে শেষভাগে ইম্প্যাক্ট ব্যানার।</span>
-                    <textarea
-                      value={adCodes.bottomBanner}
-                      onChange={(e) => setAdCodes(p => ({ ...p, bottomBanner: e.target.value }))}
-                      rows={4}
-                      placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
-                      className="w-full bg-slate-900 border border-slate-805 rounded-xl p-2.5 text-2xs font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
-                    />
-                  </div>
+                    <div>
+                      <label className="text-[10px] uppercase text-slate-400 font-bold block mb-1 font-sans font-sans">বিজ্ঞাপন প্লেসমেন্ট / রিলেশন (Where it shows)</label>
+                      <select
+                        id="new-ad-placement"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none font-sans"
+                      >
+                        <option value="top">Header Top Banner (হেডার ব্যানার)</option>
+                        <option value="bottom">Footer Bottom Banner (ফুটার ব্যানার)</option>
+                        <option value="popunder">Pop-under Script Code (পপ-আন্ডার স্ক্রিপ্ট লিংক)</option>
+                        <option value="floating">Bottom Floating Widget (ভাসমান অলংকরণ)</option>
+                        <option value="sidebar">Sidebar Chat Panel Banner (চ্যাট সাইডবার)</option>
+                      </select>
+                    </div>
 
-                  {/* Pop-under script editor */}
-                  <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
-                    <span className="text-xs font-extrabold text-slate-200 block font-sans tracking-tight">৩. পপ-আন্ডার ব্যানার স্ক্রিপ্ট (Pop-under Script Code)</span>
-                    <span className="text-[9.5px] text-slate-505 block leading-tight">ডাইরেক্ট স্ক্রিপ্ট লিংক বা জাভাস্ক্রিপ্ট ট্যাগ এখানে পেস্ট করুন।</span>
-                    <textarea
-                      value={adCodes.popUnder}
-                      onChange={(e) => setAdCodes(p => ({ ...p, popUnder: e.target.value }))}
-                      rows={4}
-                      placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
-                      className="w-full bg-slate-900 border border-slate-805 rounded-xl p-2.5 text-2xs font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
-                    />
-                  </div>
-
-                  {/* Social Bar editor */}
-                  <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
-                    <span className="text-xs font-extrabold text-slate-200 block font-sans tracking-tight">৪. কর্নার সোশ্যাল নোটিফিকেশন বার (Social Bar HTML)</span>
-                    <span className="text-[9.5px] text-slate-505 block leading-tight">নোটিফিকেশন বার বা উইজেট কোড পেস্ট করতে ব্যবহৃত হয়।</span>
-                    <textarea
-                      value={adCodes.socialBar}
-                      onChange={(e) => setAdCodes(p => ({ ...p, socialBar: e.target.value }))}
-                      rows={4}
-                      placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
-                      className="w-full bg-slate-900 border border-slate-805 rounded-xl p-2.5 text-2xs font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
-                    />
+                    <div className="flex items-end font-sans">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const titleEl = document.getElementById('new-ad-title') as HTMLInputElement;
+                          const placementEl = document.getElementById('new-ad-placement') as HTMLSelectElement;
+                          if (!titleEl || !titleEl.value.trim()) {
+                            alert('অনুগ্রহ করে বিজ্ঞাপনের একটি নাম প্রবেশ করান!');
+                            return;
+                          }
+                          const newAd = {
+                            id: 'ad_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                            title: titleEl.value.trim(),
+                            placement: placementEl.value as any,
+                            code: '',
+                            active: true
+                          };
+                          const updatedAds = [...(siteSettings.customAds || []), newAd];
+                          const ok = await saveSiteSettings({ customAds: updatedAds });
+                          if (ok) {
+                            titleEl.value = '';
+                            alert(`অভিনন্দন! "${newAd.title}" বিজ্ঞাপন বক্সটি তৈরি হয়েছে। নিচে কোড বসিয়ে অন করুন।`);
+                          }
+                        }}
+                        className="w-full py-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-450 hover:to-sky-550 text-white font-extrabold text-xs rounded-xl cursor-pointer transition-all active:scale-95 text-center flex items-center justify-center gap-1.5"
+                      >
+                        <span>প্লাস অপশন (+) অ্যাড করুন</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Save Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('site_ad_top_code', adCodes.topBanner);
-                    localStorage.setItem('site_ad_bottom_code', adCodes.bottomBanner);
-                    localStorage.setItem('site_ad_pop_code', adCodes.popUnder);
-                    localStorage.setItem('site_ad_social_code', adCodes.socialBar);
-                    alert('সফলভাবে সমস্ত বিজ্ঞাপন কোডসমূহ সংরক্ষণ করা হয়েছে!');
-                  }}
-                  className="w-full bg-sky-600 hover:bg-sky-505 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all cursor-pointer shadow-lg hover:shadow-sky-500/10 active:scale-95 text-center block uppercase tracking-wide"
-                >
-                  বিজ্ঞাপন কোডগুলো সংরক্ষণ করুন (Save Ad Placements Database) 💾
-                </button>
+                {/* ACTIVE SPONSOR ADS LIST */}
+                {(!siteSettings.customAds || siteSettings.customAds.length === 0) ? (
+                  <div className="p-8 text-center bg-slate-950 rounded-2xl border border-dashed border-slate-900">
+                    <p className="text-xs text-slate-500 italic font-sans animate-none">কোনো কাস্টম বিজ্ঞাপন ইউনিট তৈরি করা হয়নি। উপরে প্লাস (+) বাটনে ক্লিক করে প্রথম বিজ্ঞাপনটি চালু করুন!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-none">
+                    {siteSettings.customAds.map((ad, idx) => (
+                      <div key={ad.id} className="bg-slate-955 p-4 border border-slate-900 rounded-2xl flex flex-col gap-3 relative">
+                        <div className="flex justify-between items-center border-b border-slate-900 pb-2 font-sans">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-200 block truncate max-w-[180px]">{idx + 1}. {ad.title}</span>
+                            <span className="text-[8.5px] font-mono text-sky-400 uppercase mt-0.5">Placement: {ad.placement}</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (window.confirm(`আপনি কি সত্যিই "${ad.title}" বিজ্ঞাপনটি সম্পূর্ণ ডিলিট করতে চান?`)) {
+                                const updated = siteSettings.customAds.filter(a => a.id !== ad.id);
+                                await saveSiteSettings({ customAds: updated });
+                                alert('বিজ্ঞাপনটি ডিলিট করা হয়েছে!');
+                              }
+                            }}
+                            className="text-[9px] text-red-500 hover:text-red-450 font-bold hover:bg-red-500/10 border border-slate-850 p-1 px-2 rounded-lg cursor-pointer transition-colors"
+                          >
+                            মুছে ফেলুন (Delete) 🗑️
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 font-sans">
+                          <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">এইচটিএমএল / স্ক্রিপ্ট কোড (Ad Code Script)</label>
+                          <textarea
+                            value={ad.code}
+                            onChange={(e) => {
+                              const updated = siteSettings.customAds.map(a => a.id === ad.id ? { ...a, code: e.target.value } : a);
+                              setSiteSettings(prev => ({ ...prev, customAds: updated }));
+                            }}
+                            rows={4}
+                            placeholder="Embed code (HTML/JS/iFrame) here..."
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-[10px] font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
+                          />
+                        </div>
+
+                        {/* ON / OFF toggle below each adbox */}
+                        <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800 select-none mt-1 font-sans">
+                          <span className="text-[10px] font-bold text-slate-400">অন/অফ কন্ট্রোল বাটন</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const updated = siteSettings.customAds.map(a => a.id === ad.id ? { ...a, active: !a.active } : a);
+                              await saveSiteSettings({ customAds: updated });
+                            }}
+                            className={`p-1 px-3 text-[10px] font-black rounded border cursor-pointer transition-colors
+                              ${ad.active
+                                ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                                : 'bg-slate-900 border-slate-850 text-slate-400'
+                              }
+                            `}
+                          >
+                            {ad.active ? 'ON (বিজ্ঞপ্তি অন)' : 'OFF (বিজ্ঞপ্তি অফ)'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* BOTTOM COMPONENT FOR MANUAL SCRIPT BANNER ADS */}
+                <div className="bg-slate-950 border border-slate-900 rounded-2xl p-5 flex flex-col gap-4 mt-4 font-sans">
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                    <span className="text-xs font-black text-slate-300 uppercase tracking-wide">💼 গ্লোবাল বিজ্ঞাপন কোড ম্যানেজার (HTML / JS Script Placements)</span>
+                    <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-bold uppercase select-none">LIVE EVALUATION</span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    এখানে আপনি আপনার <strong>Adsterra, Google AdSense, RevenueHits</strong> বা যেকোনো এড নেটওয়ার্কের সম্পূর্ণ বিজ্ঞাপন কোড (HTML, iframe, or Javascript Code) পেস্ট করতে পারেন। কোনো কোড ফাকা বা খালি থাকলে সাইটে কোনো ব্যানার বা প্লেসহোল্ডার টেক্সট প্রদর্শিত হবে না।
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Billboard Top Banner script editor */}
+                    <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
+                      <span className="text-xs font-extrabold text-slate-205 block tracking-tight">১. হেডার ল্যান্ডস্কেপ ব্যানার কোড (Billboard Top Banner Script)</span>
+                      <span className="text-[9.5px] text-slate-500 block leading-tight">অনুসন্ধান বাটন ও ঘোষণার ঠিক উপরে প্রদর্শিত হবে।</span>
+                      <textarea
+                        value={adCodes.topBanner}
+                        onChange={(e) => setAdCodes(p => ({ ...p, topBanner: e.target.value }))}
+                        rows={4}
+                        placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-[10px] font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
+                      />
+                    </div>
+
+                    {/* Bottom sponsor script editor */}
+                    <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
+                      <span className="text-xs font-extrabold text-slate-205 block tracking-tight">২. ফুটার বিজ্ঞাপন ব্যানার কোড (Footer Bottom Banner Script)</span>
+                      <span className="text-[9.5px] text-slate-505 block leading-tight">চ্যানেল গ্রিড টেবিলের ঠিক নিচে শেষভাগে ইম্প্যাক্ট ব্যানার।</span>
+                      <textarea
+                        value={adCodes.bottomBanner}
+                        onChange={(e) => setAdCodes(p => ({ ...p, bottomBanner: e.target.value }))}
+                        rows={4}
+                        placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-[10px] font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
+                      />
+                    </div>
+
+                    {/* Pop-under script editor */}
+                    <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
+                      <span className="text-xs font-extrabold text-slate-205 block tracking-tight">৩. পপ-আন্ডার ব্যানার স্ক্রিপ্ট (Pop-under Script Code)</span>
+                      <span className="text-[9.5px] text-slate-505 block leading-tight">ডাইরেক্ট স্ক্রিপ্ট লিংক বা জাভাস্ক্রিপ্ট ট্যাগ এখানে পেস্ট করুন।</span>
+                      <textarea
+                        value={adCodes.popUnder}
+                        onChange={(e) => setAdCodes(p => ({ ...p, popUnder: e.target.value }))}
+                        rows={4}
+                        placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-[10px] font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
+                      />
+                    </div>
+
+                    {/* Social Bar editor */}
+                    <div className="bg-slate-950 p-4 border border-slate-900 rounded-2xl flex flex-col gap-2">
+                      <span className="text-xs font-extrabold text-slate-205 block tracking-tight">৪. কর্নার সোশ্যাল নোটিফিকেশন বার (Social Bar HTML)</span>
+                      <span className="text-[9.5px] text-slate-505 block leading-tight">নোটিফিকেশন বার বা উইজেট কোড পেস্ট করতে ব্যবহৃত হয়।</span>
+                      <textarea
+                        value={adCodes.socialBar}
+                        onChange={(e) => setAdCodes(p => ({ ...p, socialBar: e.target.value }))}
+                        rows={4}
+                        placeholder="বিজ্ঞাপন কোডটি এখানে পেস্ট করুন..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-[10px] font-mono text-emerald-400 focus:outline-none focus:border-sky-505 leading-normal"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('site_ad_top_code', adCodes.topBanner);
+                      localStorage.setItem('site_ad_bottom_code', adCodes.bottomBanner);
+                      localStorage.setItem('site_ad_pop_code', adCodes.popUnder);
+                      localStorage.setItem('site_ad_social_code', adCodes.socialBar);
+                      alert('সফলভাবে সমস্ত বিজ্ঞাপন কোডসমূহ সংরক্ষণ করা হয়েছে!');
+                    }}
+                    className="w-full bg-sky-600 hover:bg-sky-550 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all cursor-pointer shadow-lg hover:shadow-sky-500/10 active:scale-95 text-center block uppercase tracking-wide"
+                  >
+                    বিজ্ঞাপন কোডগুলো সংরক্ষণ করুন (Save Ad Placements Database) 💾
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* TAB 4: CHAT MODERATION, ANALYTICS AND TV PREVIEWS */}
+            {/* TAB 4: CHAT MODERATION, ANALYTICS AND OTHER CONTROLS */}
             {adminActiveTab === 'moderation' && (
               <div className="flex flex-col gap-5 animate-fade-in font-sans">
                 {/* 1. SECURE ANALYTICS CORE DECKS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-950 border border-slate-855 p-4 rounded-2xl">
+                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl">
                     <span className="text-[10px] font-black uppercase text-sky-400 tracking-wider block">মোট নিবন্ধিত ব্যবহারকারী</span>
                     <h3 className="text-2xl font-black text-white mt-1">
                       {(() => {
@@ -1966,95 +2541,38 @@ export default function App() {
                         } catch { return 0; }
                       })()} জন
                     </h3>
-                    <p className="text-[9px] text-slate-500 mt-0.5 font-sans">রিয়েল-টাইম ডেটাবেজ স্ট্যাটাস</p>
+                    <p className="text-[9px] text-slate-500 mt-0.5">রিয়েল-টাইম ডেটাবেজ স্ট্যাটাস</p>
                   </div>
 
-                  <div className="bg-slate-950 border border-slate-855 p-4 rounded-2xl">
+                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl font-sans">
                     <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">চ্যাট রুম ওপেন কাউন্টার</span>
                     <h3 className="text-2xl font-black text-white mt-1">
                       {localStorage.getItem('bongo_chat_open_counts') || '0'} বার
                     </h3>
-                    <p className="text-[9px] text-slate-505 mt-0.5 font-sans">চ্যাট উইন্ডো খুলেছেন এমন দর্শকদের সংখ্যা</p>
+                    <p className="text-[9px] text-slate-500 mt-0.5">চ্যাট উইন্ডো খুলেছেন এমন দর্শকদের সংখ্যা</p>
                   </div>
 
-                  <div className="bg-slate-950 border border-slate-855 p-4 rounded-2xl">
+                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl font-sans">
                     <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">চলতি মাসের একাউন্টস ক্রিয়েশন</span>
                     <h3 className="text-2xl font-black text-white mt-1">
                       {(() => {
                         try {
-                          const users = JSON.parse(localStorage.getItem('bongo_stream_users_db') || '[]');
-                          const thisMonth = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                          return users.filter((u: any) => {
-                            const d = u.createdAt ? new Date(u.createdAt) : new Date();
-                            return d.toLocaleString('en-US', { month: 'long', year: 'numeric' }) === thisMonth;
-                          }).length;
+                          return JSON.parse(localStorage.getItem('bongo_stream_users_db') || '[]').length;
                         } catch { return 0; }
-                      })()} টি
+                      })()} জন
                     </h3>
-                    <p className="text-[9px] text-slate-505 mt-0.5 font-sans">বর্তমান মাসব্যাপী নতুন মেম্বার সংখ্যা</p>
+                    <p className="text-[9px] text-slate-500 mt-0.5">নতুন অ্যাকাউন্ট খোলার সংখ্যা</p>
                   </div>
                 </div>
 
-                {/* Monthly account registration timeline charts */}
-                <div className="bg-slate-955/65 border border-slate-850 p-4 rounded-2xl flex flex-col gap-2">
-                  <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">মাসভিত্তিক ইউজার সাইন আপ এবং অ্যাকাউন্ট ক্রিয়েশন ট্র্যাকার</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mt-1">
-                    {['January 2026', 'February 2026', 'March 2026', 'April 2026', 'May 2026', 'June 2026'].map((monthStr) => {
-                      const count = (() => {
-                        try {
-                          const users = JSON.parse(localStorage.getItem('bongo_stream_users_db') || '[]');
-                          return users.filter((u: any) => {
-                            const d = u.createdAt ? new Date(u.createdAt) : new Date('2026-05-15');
-                            return d.toLocaleString('en-US', { month: 'long', year: 'numeric' }) === monthStr;
-                          }).length;
-                        } catch { return 0; }
-                      })();
-                      return (
-                        <div key={monthStr} className="p-2.5 bg-slate-900/60 border border-slate-850 rounded-xl text-center flex flex-col justify-between">
-                          <span className="text-[9px] text-slate-450 font-mono block">{monthStr.replace(' 2026', '')}</span>
-                          <span className="text-sm font-black text-white block mt-1">{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. CHANNELS AND STREAM URLS DASHBOARD PREVIEW */}
-                <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
-                  <span className="text-xs font-black text-slate-200 uppercase tracking-tight block mb-2">৫. রিয়্যাল-টাইম স্ট্রিম চ্যানেল ও সার্ভার স্ট্যাটাস ট্র্যাকার</span>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
-                    {channels.map((chan) => (
-                      <div key={chan.id} className="p-3 bg-slate-900/50 border border-slate-850 rounded-xl flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-slate-100">{chan.name}</span>
-                            <span className="text-[8px] bg-slate-950 text-sky-400 font-mono font-bold px-1.5 py-0.5 rounded border border-slate-800 uppercase leading-none">{chan.group}</span>
-                          </div>
-                          <span className="text-[9px] text-slate-500 font-mono block truncate mt-1">{chan.streamUrl || 'No Direct URL'}</span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedChannel(chan);
-                            setCurrentPage('app');
-                            alert(`সার্ভারে "${chan.name}" দেখতে নিয়ে যাওয়া হচ্ছে...`);
-                          }}
-                          className="px-2.5 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-[10px] text-sky-400 font-bold rounded cursor-pointer select-none transition-all shrink-0"
-                        >
-                          ভিজিট চ্যানেল
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. ACTIVE LIVE CHAT STREAM FEED WITH CLICK-TO-BAN AND ACTION POPUPS */}
-                <div className="bg-slate-950 border border-slate-855 p-4 rounded-2xl flex flex-col gap-2">
+                <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4 font-sans">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-                      <span className="text-xs font-black text-slate-200 uppercase tracking-wider">রিয়েল-টাইম মডারেশন কন্ট্রোল (ক্লিক করুন ব্যান/আনমিউট করতে)</span>
+                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-505 animate-pulse" />
+                      <span className="text-xs font-black text-slate-200 uppercase tracking-wider">১. লাইভ চ্যাট রুম মডারেশন কন্ট্রোল (ক্লিক করুন ব্যান/আনমিউট করতে)</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => {
                         if (window.confirm('আপনি কি সত্যিই সম্পূর্ণ চ্যাট বোর্ড মুছে দিতে চান?')) {
                           localStorage.setItem('bongo_live_chat_messages_db', '[]');
@@ -2062,7 +2580,7 @@ export default function App() {
                           window.dispatchEvent(new Event('storage'));
                         }
                       }}
-                      className="text-[9px] bg-rose-500/10 text-rose-455 hover:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-500/20 font-bold cursor-pointer transition-colors"
+                      className="text-[9px] bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-500/20 font-bold cursor-pointer transition-colors"
                     >
                       ক্লিয়ার অল চ্যাট
                     </button>
@@ -2072,7 +2590,7 @@ export default function App() {
                   <div className="max-h-[250px] overflow-y-auto border border-slate-850 rounded-xl bg-slate-900/40 p-3 space-y-1.5 scrollbar-thin">
                     {(() => {
                       const dbRaw = localStorage.getItem('bongo_live_chat_messages_db');
-                      let chats: any[] = [];
+                      let chats = [];
                       try { chats = dbRaw ? JSON.parse(dbRaw) : []; } catch(e){}
 
                       if (chats.length === 0) {
@@ -2082,17 +2600,18 @@ export default function App() {
                       const banned = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
                       const muted = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
 
-                      return chats.map((c: any) => {
+                      return chats.map((c) => {
                         const isBanned = banned.includes(c.username);
                         const isMuted = muted.includes(c.username);
 
                         return (
-                          <div key={c.id} className="p-2 bg-slate-950/40 hover:bg-slate-900 border border-slate-850/60 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+                          <div key={c.id} className="p-2 bg-slate-950/40 hover:bg-slate-900 border border-slate-800/60 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-[9px] text-slate-500 shrink-0 font-mono">{c.time}</span>
                                 <span className="text-xs shrink-0">{c.flag}</span>
-                                <span
+                                <button
+                                  type="button"
                                   title="ব্যবহারকারীর উপর মড অ্যাকশন নিতে এখানে ক্লিক করুন"
                                   onClick={() => {
                                     const act = window.confirm(`আপনি কি "${c.name}" (@${c.username}) এর উপর মডারেশন অ্যাকশন নিতে চান?`);
@@ -2109,19 +2628,41 @@ export default function App() {
                                         // Delete messages
                                         const filtered = chats.filter(m => m.username !== c.username);
                                         localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filtered));
-                                        alert(`সফলভাবে "${c.username}" ব্যান করা হয়েছে!`);
+                                        fetch('/api/moderation/update', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ bannedUsers: bList })
+                                        }).catch(err => console.error('Error posting ban status:', err));
+                                        alert(`"${c.username}" ব্যান করা হয়েছে এবং চ্যাট অপসারিত হয়েছে।`);
                                       } else if (action === 'unban') {
                                         const bList = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
-                                        localStorage.setItem('bongo_stream_banned_users', JSON.stringify(bList.filter((u: any) => u !== c.username)));
+                                        const nextList = bList.filter((u) => u !== c.username);
+                                        localStorage.setItem('bongo_stream_banned_users', JSON.stringify(nextList));
+                                        fetch('/api/moderation/update', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ bannedUsers: nextList })
+                                        }).catch(err => console.error('Error posting ban status:', err));
                                         alert(`"${c.username}" এর ব্যান প্রত্যাহার করা হয়েছে।`);
                                       } else if (action === 'mute') {
                                         const mList = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
                                         if (!mList.includes(c.username)) mList.push(c.username);
                                         localStorage.setItem('bongo_stream_muted_users', JSON.stringify(mList));
+                                        fetch('/api/moderation/update', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ mutedUsers: mList })
+                                        }).catch(err => console.error('Error posting mute status:', err));
                                         alert(`"${c.username}" মিউট করা হয়েছে।`);
                                       } else if (action === 'unmute') {
                                         const mList = JSON.parse(localStorage.getItem('bongo_stream_muted_users') || '[]');
-                                        localStorage.setItem('bongo_stream_muted_users', JSON.stringify(mList.filter((u: any) => u !== c.username)));
+                                        const nextList = mList.filter((u) => u !== c.username);
+                                        localStorage.setItem('bongo_stream_muted_users', JSON.stringify(nextList));
+                                        fetch('/api/moderation/update', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ mutedUsers: nextList })
+                                        }).catch(err => console.error('Error posting mute status:', err));
                                         alert(`"${c.username}" এর মিউট প্রত্যাহার করা হয়েছে।`);
                                       } else if (action === 'delete') {
                                         const filtered = chats.filter(m => m.id !== c.id);
@@ -2133,14 +2674,14 @@ export default function App() {
                                       window.dispatchEvent(new Event('storage'));
                                     }
                                   }}
-                                  className="font-extrabold text-sky-450 hover:text-sky-355 cursor-pointer underline flex items-center gap-0.5"
+                                  className="font-extrabold text-sky-400 hover:text-sky-305 cursor-pointer underline flex items-center gap-0.5 hover:no-underline font-sans"
                                 >
                                   @{c.name}
-                                  {isBanned && <span className="text-[7.5px] bg-rose-500/20 text-rose-400 border border-rose-500/25 rounded px-1 lowercase font-mono">banned</span>}
+                                  {isBanned && <span className="text-[7.5px] bg-rose-500/20 text-rose-450 border border-rose-500/25 rounded px-1 lowercase font-mono">banned</span>}
                                   {isMuted && <span className="text-[7.5px] bg-zinc-700/20 text-zinc-400 border border-zinc-700/25 rounded px-1 lowercase font-mono">muted</span>}
-                                </span>
+                                </button>
                               </div>
-                              <p className="text-slate-200 mt-1 font-sans break-all select-all leading-normal">{c.text}</p>
+                              <p className="text-slate-205 mt-1 font-sans break-all select-all leading-normal">{c.text}</p>
                             </div>
 
                             <div className="flex items-center gap-1 md:self-center shrink-0">
@@ -2148,20 +2689,25 @@ export default function App() {
                                 type="button"
                                 onClick={() => {
                                   const nextBanned = isBanned 
-                                    ? banned.filter((u: string) => u !== c.username)
+                                    ? banned.filter((u) => u !== c.username)
                                     : [...banned, c.username];
                                   localStorage.setItem('bongo_stream_banned_users', JSON.stringify(nextBanned));
                                   if (!isBanned) {
                                     const filtered = chats.filter(m => m.username !== c.username);
                                     localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filtered));
                                   }
+                                  fetch('/api/moderation/update', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ bannedUsers: nextBanned })
+                                  }).catch(err => console.error('Error posting ban status:', err));
                                   alert(isBanned ? `"${c.name}" আনব্যান করা হয়েছে!` : `"${c.name}" ব্যান ও চ্যাট অপসারিত হয়েছে!`);
                                   window.dispatchEvent(new Event('storage'));
                                 }}
                                 className={`px-2 py-1 text-[10px] rounded font-bold transition-all cursor-pointer ${
                                   isBanned 
                                     ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25' 
-                                    : 'bg-rose-500/10 text-rose-450 hover:bg-rose-500/20'
+                                    : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
                                 }`}
                               >
                                 {isBanned ? 'Unban' : 'Ban'}
@@ -2170,9 +2716,14 @@ export default function App() {
                                 type="button"
                                 onClick={() => {
                                   const nextMuted = isMuted 
-                                    ? muted.filter((u: string) => u !== c.username)
+                                    ? muted.filter((u) => u !== c.username)
                                     : [...muted, c.username];
                                   localStorage.setItem('bongo_stream_muted_users', JSON.stringify(nextMuted));
+                                  fetch('/api/moderation/update', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ mutedUsers: nextMuted })
+                                  }).catch(err => console.error('Error posting mute status:', err));
                                   alert(isMuted ? `"${c.name}" আনমিউট করা হয়েছে!` : `"${c.name}" মিউট করা হয়েছে!`);
                                   window.dispatchEvent(new Event('storage'));
                                 }}
@@ -2193,13 +2744,14 @@ export default function App() {
                 </div>
 
                 {/* 3.1 USER REPORTS AND ABUSE COMPLAINTS CORNER */}
-                <div className="bg-slate-950 border border-slate-855 p-4 rounded-2xl flex flex-col gap-2">
+                <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex flex-col gap-2">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
                       <span className="text-xs font-black text-slate-200 uppercase tracking-wider">🚨 ব্যবহারকারী অভিযোগ ও রিপোর্ট লাল তালিকা (Submissions & Abuse Reports)</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => {
                         if (window.confirm('আপনি কি সত্যিই সম্পূর্ণ অভিযোগ তালিকা খালি করতে চান?')) {
                           reportsList.forEach(r => {
@@ -2215,7 +2767,7 @@ export default function App() {
                           window.dispatchEvent(new Event('storage'));
                         }
                       }}
-                      className="text-[9px] bg-rose-500/10 text-rose-450 hover:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-500/20 font-bold cursor-pointer transition-colors"
+                      className="text-[9px] bg-rose-500/10 text-rose-455 hover:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-500/20 font-bold cursor-pointer transition-colors"
                     >
                       ক্লিয়ার অল রিপোর্টস
                     </button>
@@ -2223,13 +2775,13 @@ export default function App() {
 
                   <div className="max-h-[220px] overflow-y-auto border border-slate-850 rounded-xl bg-slate-900/40 p-3 space-y-2 scrollbar-thin">
                     {reportsList.length === 0 ? (
-                      <p className="text-[10px] text-slate-500 italic text-center py-4">রিপোর্ট বোর্ডে কোনো পেন্ডিং অভিযোগ পাওয়া যায়নি।</p>
+                      <p className="text-[10px] text-slate-505 italic text-center py-4">রিপোর্ট বোর্ডে কোনো পেন্ডিং অভিযোগ পাওয়া যায়নি।</p>
                     ) : (
-                      reportsList.map((r: any) => {
+                      reportsList.map((r) => {
                         return (
-                          <div key={r.id} className="p-3 bg-slate-950/65 border border-slate-850 rounded-xl flex flex-col gap-2 text-xs">
+                          <div key={r.id} className="p-3 bg-slate-950/65 border border-slate-800 rounded-xl flex flex-col gap-2 text-xs font-sans">
                             <div className="flex items-center justify-between flex-wrap gap-1">
-                              <span className="text-[9px] text-rose-400 bg-rose-500/10 border border-rose-500/25 px-2 py-0.5 rounded font-black font-sans uppercase">
+                              <span className="text-[9px] text-rose-450 bg-rose-500/10 border border-rose-500/25 px-2 py-0.5 rounded font-black font-sans uppercase">
                                 ⚠️ {r.reason}
                               </span>
                               <span className="text-[9px] text-slate-500 font-mono italic">{r.reportedAt}</span>
@@ -2238,15 +2790,16 @@ export default function App() {
                             <p className="text-slate-350">
                               আসামি: <strong className="text-amber-400">@{r.reportedName} ({r.reportedUser})</strong> 
                               <span className="text-slate-500"> — অভিযোগকারী: </span>
-                              <strong className="text-sky-450">{r.reporterName}</strong>
+                              <strong className="text-sky-400">{r.reporterName}</strong>
                             </p>
 
-                            <div className="p-2 bg-slate-950 rounded border border-slate-900 text-slate-400 font-mono italic text-[11px] break-all leading-normal">
+                            <div className="p-2 bg-slate-950 rounded border border-slate-900 text-slate-450 font-mono italic text-[11px] break-all leading-normal">
                               "{r.reportedMessage}"
                             </div>
 
-                            <div className="flex items-center justify-end gap-1.5 mt-1">
+                            <div className="flex items-center justify-end gap-1.5 mt-1 border-none bg-transparent">
                               <button
+                                type="button"
                                 onClick={() => {
                                   // Dismiss report server-side
                                   fetch('/api/reports/delete', {
@@ -2255,7 +2808,7 @@ export default function App() {
                                     body: JSON.stringify({ id: r.id })
                                   })
                                   .then(() => {
-                                    const filtered = reportsList.filter((i: any) => i.id !== r.id);
+                                    const filtered = reportsList.filter((i) => i.id !== r.id);
                                     setReportsList(filtered);
                                     localStorage.setItem('bongo_live_chat_reports_db', JSON.stringify(filtered));
                                     alert('অভিযোগটি খারিজ করা হয়েছে।');
@@ -2265,53 +2818,30 @@ export default function App() {
                                     alert('সার্ভার কানেকশন ত্রুটি!');
                                   });
                                 }}
-                                className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-350 hover:text-white rounded text-[10px] font-bold cursor-pointer transition-colors"
+                                className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-350 hover:text-white rounded text-[10px] font-bold cursor-pointer transition-colors border border-transparent"
                               >
                                 খারিজ (Dismiss)
                               </button>
 
                               <button
+                                type="button"
                                 onClick={() => {
-                                  try {
-                                    const chatDbRaw = localStorage.getItem('bongo_live_chat_messages_db');
-                                    const chatDb = chatDbRaw ? JSON.parse(chatDbRaw) : [];
-                                    const filteredChats = chatDb.filter((m: any) => m.id !== r.messageId);
-                                    localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredChats));
-                                  } catch(e){}
-
-                                  fetch('/api/reports/delete', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ id: r.id })
-                                  })
-                                  .then(() => {
-                                    const filteredReports = reportsList.filter((i: any) => i.id !== r.id);
-                                    setReportsList(filteredReports);
-                                    localStorage.setItem('bongo_live_chat_reports_db', JSON.stringify(filteredReports));
-                                    alert('মেসেজটি সফলভাবে ডিলিট এবং চ্যাট বোর্ড থেকে অপসারণ করা হয়েছে!');
-                                    window.dispatchEvent(new Event('storage'));
-                                  })
-                                  .catch(() => {
-                                    alert('মেসেজ ডিলিট সফল হয়েছে কিন্তু রিপোর্ট ডিলিট সার্ভার ত্রুটি!');
-                                  });
-                                }}
-                                className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-450 border border-rose-500/20 rounded text-[10px] font-extrabold cursor-pointer transition-all"
-                              >
-                                মেসেজ ডিলিট (Delete Msg)
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  const banned = JSON.parse(localStorage.getItem('bongo_stream_banned_users') || '[]');
-                                  if (!banned.includes(r.reportedUser)) {
-                                    banned.push(r.reportedUser);
-                                    localStorage.setItem('bongo_stream_banned_users', JSON.stringify(banned));
+                                  let bannedList = [...adminBannedUsers];
+                                  if (!bannedList.includes(r.reportedUser)) {
+                                    bannedList.push(r.reportedUser);
+                                    setAdminBannedUsers(bannedList);
+                                    localStorage.setItem('bongo_stream_banned_users', JSON.stringify(bannedList));
+                                    fetch('/api/moderation/update', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ bannedUsers: bannedList })
+                                    }).catch(err => console.error('Error posting ban status:', err));
                                   }
 
                                   try {
                                     const chatDbRaw = localStorage.getItem('bongo_live_chat_messages_db');
                                     const chatDb = chatDbRaw ? JSON.parse(chatDbRaw) : [];
-                                    const filteredChats = chatDb.filter((m: any) => m.username !== r.reportedUser);
+                                    const filteredChats = chatDb.filter((m) => m.username !== r.reportedUser);
                                     localStorage.setItem('bongo_live_chat_messages_db', JSON.stringify(filteredChats));
                                   } catch (e) {}
 
@@ -2321,7 +2851,7 @@ export default function App() {
                                     body: JSON.stringify({ id: r.id })
                                   })
                                   .then(() => {
-                                    const filteredReports = reportsList.filter((i: any) => i.id !== r.id);
+                                    const filteredReports = reportsList.filter((i) => i.id !== r.id);
                                     setReportsList(filteredReports);
                                     localStorage.setItem('bongo_live_chat_reports_db', JSON.stringify(filteredReports));
                                     alert(`ব্যবহারকারী @${r.reportedUser} কে সফলভাবে ব্যান এবং সকল মেসেজ অপসারণ করা হয়েছে!`);
@@ -2331,7 +2861,7 @@ export default function App() {
                                     alert('ইউজার ব্যান সম্পন্ন হয়েছে কিন্তু রিপোর্ট বাতিল সার্ভার ত্রুটি!');
                                   });
                                 }}
-                                className="px-2 py-1 bg-red-650 hover:bg-red-600 text-white border border-red-700/50 rounded text-[10px] font-black cursor-pointer transition-all"
+                                className="px-2 py-1 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-550 hover:to-rose-650 text-white rounded text-[10px] font-black cursor-pointer transition-all border border-transparent"
                               >
                                 আসামিকে ব্যান করুন (Extreme Ban)
                               </button>
@@ -2344,15 +2874,15 @@ export default function App() {
                 </div>
 
                 {/* 4. LIVE CHAT POLL CONTROLLER FORM */}
-                <div className="p-4 bg-slate-950 border border-slate-855 rounded-2xl">
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl">
                   <span className="text-xs font-black text-indigo-400 block mb-2 uppercase tracking-wide">🗳️ লাইভ চ্যাট পোল আপডেট করুন (Manage Live Poll Widget)</span>
                   
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       const f = e.currentTarget;
-                      const q = (f.elements.namedItem('poll_q') as HTMLInputElement).value;
-                      const opts = (f.elements.namedItem('poll_opts') as HTMLInputElement).value;
+                      const q = f.elements.namedItem('poll_q').value;
+                      const opts = f.elements.namedItem('poll_opts').value;
 
                       if (!q || !opts) {
                         alert('পোল প্রশ্ন এবং অপশনসমূহ আবশ্যিক!');
@@ -2378,28 +2908,28 @@ export default function App() {
                   >
                     <div className="flex flex-col gap-2">
                       <div>
-                        <label className="text-[10px] text-slate-450 font-bold block mb-1">পোল বা জরিপ জিজ্ঞাসা (Poll Query):</label>
+                        <label className="text-[10px] text-slate-400 font-bold block mb-1">পোল বা জরিপ জিজ্ঞাসা (Poll Query):</label>
                         <input
                           name="poll_q"
                           type="text"
                           defaultValue={pollQuestion}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-205 focus:outline-none"
+                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-205 focus:outline-none focus:border-indigo-500 font-sans"
                           placeholder="e.g. Which Team do you love?"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-450 font-bold block mb-1">পোল অপশনসমূহ (কমা দিয়ে আলাদা করুন):</label>
+                        <label className="text-[10px] text-slate-400 font-bold block mb-1">পোল অপশনসমূহ (কমা দিয়ে আলাদা করুন):</label>
                         <input
                           name="poll_opts"
                           type="text"
                           defaultValue={pollOptions}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none"ssName="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none"
+                          className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-205 focus:outline-none focus:border-indigo-500 font-sans"
                           placeholder="Option1,Option2,Option3,Option4"
                         />
                       </div>
                       <button
                         type="submit"
-                        className="mt-1 bg-indigo-650 hover:bg-indigo-600 text-white font-extrabold text-[10px] py-1.5 px-3 rounded cursor-pointer self-start transition-colors"
+                        className="mt-1 bg-indigo-600 hover:bg-indigo-550 text-white font-extrabold text-[10px] py-1.5 px-3 rounded cursor-pointer self-start transition-colors"
                       >
                         পোল আপডেট করুন 🗳️
                       </button>
@@ -2408,9 +2938,9 @@ export default function App() {
                 </div>
 
                 {/* Registered VIP users management lists */}
-                <div className="mt-1 p-4 bg-slate-950 border border-slate-850 rounded-2xl flex flex-col gap-3">
+                <div className="mt-1 p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-2">
-                    <span className="text-[11px] font-bold text-slate-200 uppercase">নিবন্ধিত ব্যবহারকারী কাস্টমাইজেশন ও মডারেশন (Registered Users Control Panel)</span>
+                    <span className="text-[11px] font-bold text-slate-200 uppercase font-sans">নিবন্ধিত ব্যবহারকারী কাস্টমাইজেশন ও মডারেশন (Registered Users Control Panel)</span>
                     
                     {/* Search bar */}
                     <input
@@ -2418,7 +2948,7 @@ export default function App() {
                       placeholder="নাম, ইউজারনেম বা মোবাইল দিয়ে খুঁজুন..."
                       value={adminUserSearch}
                       onChange={(e) => setAdminUserSearch(e.target.value)}
-                      className="bg-slate-900 border border-slate-805 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-sky-505 w-full sm:w-60 font-sans"
+                      className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-sky-505 w-full sm:w-60 font-sans"
                     />
                   </div>
                   
@@ -2430,7 +2960,7 @@ export default function App() {
                     } catch (e) {}
 
                     // Filter users based on search
-                    const filteredUsers = usersList.filter((usr: any) => {
+                    const filteredUsers = usersList.filter((usr) => {
                       const searchLower = adminUserSearch.toLowerCase();
                       const nameMatch = usr.name?.toLowerCase().includes(searchLower);
                       const emailMatch = usr.email?.toLowerCase().includes(searchLower);
@@ -2439,19 +2969,19 @@ export default function App() {
                     });
 
                     if (filteredUsers.length === 0) {
-                      return <p className="text-[10px] text-slate-500 italic text-center py-2">কোনো নিবন্ধিত ব্যবহারকারী পাওয়া যায়নি।</p>;
+                      return <p className="text-[10px] text-slate-505 italic text-center py-2">কোনো নিবন্ধিত ব্যবহারকারী পাওয়া যায়নি।</p>;
                     }
 
                     return (
                       <div className="max-h-[300px] overflow-y-auto border border-slate-800 rounded-xl bg-slate-900 p-2 space-y-2 scrollbar-thin text-xs font-sans">
-                        {filteredUsers.map((usr: any, i: number) => {
+                        {filteredUsers.map((usr, i) => {
                           const usrUsername = usr.email ? usr.email.split('@')[0] : (usr.username || usr.name.toLowerCase().replace(/\s+/g, ''));
                           const isVerified = adminVerifiedUsers.includes(usrUsername);
                           const isBanned = adminBannedUsers.includes(usrUsername);
                           const isMuted = adminMutedUsers.includes(usrUsername);
 
                           const toggleVerify = () => {
-                            let next: string[];
+                            let next;
                             if (isVerified) {
                               next = adminVerifiedUsers.filter(u => u !== usrUsername);
                             } else {
@@ -2459,11 +2989,16 @@ export default function App() {
                             }
                             setAdminVerifiedUsers(next);
                             localStorage.setItem('bongo_stream_verified_users', JSON.stringify(next));
+                            fetch('/api/moderation/update', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ verifiedUsers: next })
+                            }).catch(err => console.error('Error updating verified users on server:', err));
                             window.dispatchEvent(new Event('storage'));
                           };
 
                           const toggleBan = () => {
-                            let next: string[];
+                            let next;
                             if (isBanned) {
                               next = adminBannedUsers.filter(u => u !== usrUsername);
                               alert(`ব্যবহারকারী @${usrUsername} সফলভাবে আনব্যান করা হয়েছে।`);
@@ -2473,11 +3008,16 @@ export default function App() {
                             }
                             setAdminBannedUsers(next);
                             localStorage.setItem('bongo_stream_banned_users', JSON.stringify(next));
+                            fetch('/api/moderation/update', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ bannedUsers: next })
+                            }).catch(err => console.error('Error updating banned users on server:', err));
                             window.dispatchEvent(new Event('storage'));
                           };
 
                           const toggleMute = () => {
-                            let next: string[];
+                            let next;
                             if (isMuted) {
                               next = adminMutedUsers.filter(u => u !== usrUsername);
                               alert(`ব্যবহারকারী @${usrUsername} সফলভাবে আনমিউট করা হয়েছে।`);
@@ -2487,14 +3027,19 @@ export default function App() {
                             }
                             setAdminMutedUsers(next);
                             localStorage.setItem('bongo_stream_muted_users', JSON.stringify(next));
+                            fetch('/api/moderation/update', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ mutedUsers: next })
+                            }).catch(err => console.error('Error updating muted users on server:', err));
                             window.dispatchEvent(new Event('storage'));
                           };
 
-                          const activePres = onlinePresenceUsers.find((p: any) => p.username === usrUsername);
+                          const activePres = onlinePresenceUsers.find((p) => p.username === usrUsername);
                           const watchingText = activePres ? activePres.watchingChannel : '';
 
                           return (
-                            <div key={usr.phone || usrUsername || i} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-850 rounded-xl gap-2 transition-all">
+                            <div key={usr.phone || usrUsername || i} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 bg-slate-950/40 hover:bg-slate-955 border border-slate-800 rounded-xl gap-2 transition-all">
                               <div>
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="font-extrabold text-slate-100 block text-xs">{usr.name}</span>
@@ -2521,22 +3066,21 @@ export default function App() {
                                 </span>
 
                                 {watchingText && (
-                                  <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-450 bg-emerald-550/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg w-fit font-semibold">
-                                    <span className="w-1.5 h-1.5 bg-emerald-550 rounded-full animate-pulse shrink-0" />
-                                    <span>বর্তমানে দেখছেন: <strong className="text-emerald-400">{watchingText}</strong></span>
+                                  <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-450 bg-emerald-555/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg w-fit font-semibold font-sans">
+                                    <span className="w-1.5 h-1.5 bg-emerald-555 rounded-full animate-pulse shrink-0" />
+                                    <span>বর্তমানে দেখছেন: <strong className="text-emerald-400 font-sans">{watchingText}</strong></span>
                                   </div>
                                 )}
                               </div>
                               
                               <div className="flex items-center gap-1.5 font-sans shrink-0">
-                                {/* Blue tick verify button */}
                                 <button
                                   type="button"
                                   onClick={toggleVerify}
                                   className={`p-1.5 px-2 text-[10px] rounded cursor-pointer font-bold transition-all border
                                     ${isVerified 
                                       ? 'bg-sky-500/20 text-sky-450 border-sky-500/30 hover:bg-sky-500/35' 
-                                      : 'bg-slate-900 text-slate-450 border-slate-800 hover:border-slate-700 hover:text-white'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
                                     }
                                   `}
                                 >
@@ -2549,7 +3093,7 @@ export default function App() {
                                   className={`p-1.5 px-2 text-[10px] rounded cursor-pointer font-bold transition-all border
                                     ${isMuted 
                                       ? 'bg-zinc-700/20 text-zinc-350 border-zinc-700' 
-                                      : 'bg-slate-900 text-slate-450 border-slate-800 hover:border-slate-700 hover:text-white'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
                                     }
                                   `}
                                 >
@@ -2578,6 +3122,7 @@ export default function App() {
                 </div>
               </div>
             )}
+
 
             {/* TAB 5: SYSTEM AND VERSIONS */}
             {adminActiveTab === 'system' && (
@@ -2650,9 +3195,7 @@ export default function App() {
                     </button>
                     
                     <button
-                      onClick={() => {
-                        alert(`আপনার সাকসেসফুল ওয়েবসাইট কনফিগারেশন ব্যাকআপ কপি জেনারেট করা হয়েছে!\nআপনার ব্রাউজারে এটি ডাউনলোড বা সেভ রাখা হয়েছে।`);
-                      }}
+                      onClick={handleDownloadHTMLUserPanel}
                       className="py-1.5 px-3 bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[10px] rounded transition-all cursor-pointer"
                     >
                       📥 ডাউনলোড করুন সম্পূর্ণ HTML কোড (Export Config)
@@ -2678,8 +3221,28 @@ export default function App() {
     return (
       <div id="bongo-routing-landing-wrapper">
         <LandingPage
-          onStartApp={() => setCurrentPage('app')}
-          onOpenLogin={() => setIsAuthOpen(true)}
+          onStartApp={() => {
+            if (!isLoggedIn) {
+              let guestId = localStorage.getItem('bongo_guest_username');
+              if (!guestId) {
+                guestId = 'guest_' + Math.floor(Math.random() * 1000000);
+                localStorage.setItem('bongo_guest_username', guestId);
+              }
+              const guestName = 'ব্যবহারকারী ' + guestId.substring(6);
+              const guestUser = {
+                username: guestId,
+                name: guestName,
+                badge: 'GUEST_VIP',
+                avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${guestId}`
+              };
+              localStorage.setItem('bongo_stream_logged_in', 'true');
+              localStorage.setItem('bongo_stream_user_cfg', JSON.stringify(guestUser));
+              setCurrentUser(guestUser);
+              setIsLoggedIn(true);
+            }
+            setIsTelegramOnboardingOpen(true);
+          }}
+          onOpenLogin={() => setIsNoticeOpen(true)}
           onOpenAdmin={() => setCurrentPage('admin')}
           isLoggedIn={isLoggedIn}
           currentUser={currentUser}
@@ -2693,12 +3256,26 @@ export default function App() {
           onClose={() => setIsAuthOpen(false)}
           onLoginSuccess={handleLoginSuccess}
         />
+        <NoticeModal
+          isOpen={isNoticeOpen}
+          onClose={() => setIsNoticeOpen(false)}
+          siteNameEnglish={siteNameEnglish}
+          siteNameBangla={siteNameBangla}
+        />
+        <TelegramOnboarding
+          isOpen={isTelegramOnboardingOpen}
+          onClose={() => {
+            setIsTelegramOnboardingOpen(false);
+            setCurrentPage('app');
+          }}
+          telegramUrl={siteSettings.telegramUrl}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans transition-all selection:bg-sky-500/30 selection:text-white bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/40 via-slate-950 to-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans transition-all selection:bg-sky-500/30 selection:text-white bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/40 via-slate-950 to-slate-950 overflow-x-hidden max-w-full w-full">
       
       {/* Decorative Grid Mesh overlay to retain aesthetic cohesion */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-15 pointer-events-none" />
@@ -2710,6 +3287,15 @@ export default function App() {
           {/* Logo & Headline */}
           <div className="flex items-center gap-3">
             <button
+              id="btn-toggle-sidebar"
+              onClick={() => setIsSidebarOpen(true)}
+              title="সাইডবার মেনু খুলুন"
+              className="p-2 bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-400 rounded-lg border border-slate-800 transition-all cursor-pointer mr-0.5 active:scale-95"
+            >
+              <Menu className="w-4 h-4 text-amber-450" />
+            </button>
+
+            <button
               id="btn-back-to-landing"
               onClick={() => setCurrentPage('landing')}
               title="হোমপেজে ফিরে যান"
@@ -2720,13 +3306,15 @@ export default function App() {
 
             <div className="flex items-center gap-2 select-none">
               <FreeWorldCupBDLogo className="w-10 h-10 hover:scale-105 transition-transform shrink-0" />
-              <div>
+              <div className="flex flex-col">
                 <div className="flex items-center gap-1">
-                  <h1 className="text-sm font-extrabold text-slate-100 tracking-tight leading-none bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
+                  <h1 className="text-sm font-extrabold text-slate-100 tracking-tight leading-none bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent truncate max-w-[110px] sm:max-w-[160px] md:max-w-[200px]">
                     {siteNameEnglish}
                   </h1>
                 </div>
-                <p className="text-[9px] text-slate-450 font-sans tracking-wide">{siteNameBangla} - লাইভ স্পোর্টস ও টিভি</p>
+                <p className="text-[8.5px] text-slate-450 font-sans tracking-tight truncate max-w-[105px] sm:max-w-[150px] md:max-w-[200px]" title={siteNameBangla}>
+                  {siteNameBangla}
+                </p>
               </div>
             </div>
           </div>
@@ -2747,20 +3335,7 @@ export default function App() {
               </button>
             )}
 
-            {/* Live Support Helpdesk Button with Pulsating dot if online */}
-            <button
-              onClick={() => setIsSupportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-[11px] font-bold cursor-pointer transition-all active:scale-95 text-emerald-400 select-none hover:text-emerald-300"
-              title="লাইভ সাপোর্ট হেল্পডেস্ক"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>লাইভ সাপোর্ট</span>
-              {supportEnabled && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" />
-              )}
-            </button>
-            
-            {/* Authenticated User state display */}
+             {/* Authenticated User state display */}
             {isLoggedIn && currentUser ? (
               <div className="flex items-center gap-2">
                 {/* Visual Clickable Avatar and Name button to edit profile settings */}
@@ -2827,17 +3402,17 @@ export default function App() {
                 title="নতুন সংস্করণ বা সংস্করণ আপডেট চেক করুন"
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500/10 to-amber-600/10 hover:from-amber-500/20 hover:to-amber-600/20 text-amber-400 text-2xs sm:text-xs font-bold rounded-lg border border-amber-500/35 hover:border-amber-400 transition-all cursor-pointer shadow active:scale-95 group animate-pulse"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 font-bold group-hover:scale-110 transition-transform" />
                 <span>আপডেট {appVersion === 'v1.1.0' ? 'v1.1.0 (আপডেটেড)' : 'উপলব্ধ (v1.1.0)'}</span>
               </button>
             )}
 
             <button
-              id="btn-header-refresh-playlist"
-              onClick={() => loadChannels(true)}
-              disabled={loading || refreshing}
-              title="নতুন করে সব চ্যানেল আপলোড ও পরীক্ষা করুন"
-              className="flex items-center gap-1.2 px-3 py-1.5 bg-sky-600 hover:bg-sky-505 text-xs font-semibold text-white rounded-lg transition-all shadow-md cursor-pointer active:scale-95"
+               id="btn-header-refresh-playlist"
+               onClick={() => loadChannels(true)}
+               disabled={loading || refreshing}
+               title="নতুন করে সব চ্যানেল আপলোড ও পরীক্ষা করুন"
+               className="flex items-center gap-1.2 px-3 py-1.5 bg-sky-600 hover:bg-sky-505 text-xs font-semibold text-white rounded-lg transition-all shadow-md cursor-pointer active:scale-95"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">রিফ্রেশ</span>
@@ -2851,7 +3426,7 @@ export default function App() {
 
         {!isLoggedIn ? (
           /* VIP Account Auth blocked screen as requested */
-          <div id="app-auth-lock-gate" className="w-full max-w-lg bg-slate-900 border border-slate-805 rounded-3xl overflow-hidden p-6 md:p-8 shadow-2xl text-center select-none my-12 mx-auto">
+          <div id="app-auth-lock-gate" className="w-full max-w-lg bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden p-6 md:p-8 shadow-2xl text-center select-none my-12 mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-5 text-amber-450 animate-pulse">
               <Lock className="w-8 h-8" />
             </div>
@@ -2905,11 +3480,12 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
             
             {/* LEFT PANEL: Sticky Premium Standalone Stream Player Frame */}
-            <div className="lg:col-span-5 lg:sticky lg:top-24 z-30 flex flex-col gap-4 animate-fade-in">
+            <div className="lg:col-span-4 lg:sticky lg:top-24 z-30 flex flex-col gap-4 animate-fade-in">
               <div className="relative">
                 <CustomPlayer 
                   channel={selectedChannel} 
                   onReportWorkingState={handleReportWorkingState} 
+                  serverId={activeServerId}
                 />
                 
                 {/* Connecting Server overlay indicator */}
@@ -2951,162 +3527,74 @@ export default function App() {
                 </div>
               )}
 
-              {/* MAGNIFICENT 15 GLOBAL VIRTUAL SERVERS SELECTOR BLOCK */}
+              {/* MAGNIFICENT 4 REAL-TIME HIGH SPEED SERVERS SELECTOR BLOCK */}
               <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200">
-                    <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    <span>সার্ভার সিলেক্ট করুন (Sports Fast CDNs)</span>
+                    <Radio className="w-4 h-4 text-pink-500 animate-pulse" />
+                    <span>সার্ভার</span>
                   </div>
                   <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">
-                    ● ACTIVE
+                    ● real-time
                   </span>
                 </div>
                 
                 {/* Active server readout details */}
                 <div className="p-2 px-3 bg-slate-950 border border-slate-850 rounded-xl text-[11px] text-slate-400 flex items-center justify-between font-mono">
-                  <span>চলতি সার্ভার (Current Routing):</span>
+                  <span>চলতি সার্ভার (Routing):</span>
                   {connectingServer ? (
-                    <span className="text-amber-400 font-bold animate-pulse">Connecting {connectingServer}...</span>
+                    <span className="text-amber-400 font-bold animate-pulse">অনলাইন {connectingServer}...</span>
                   ) : (
-                    <span className="text-sky-400 font-bold">{activeServer}</span>
+                    <span className="text-pink-400 font-bold">সার্ভার {activeServerId === '1' ? '১' : activeServerId === '2' ? '২' : activeServerId === '3' ? '৩' : '৪'}</span>
                   )}
                 </div>
 
-                {/* Horizontal draggable Server Row */}
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                {/* Grid layout for 4 real-time servers */}
+                <div className="grid grid-cols-4 gap-2.5">
                   {[
-                    { id: '1', name: 'Singapore Edge Premium (WiFi 10G Feed)', provider: 'WiFi SG-10G', ping: '4ms', load: '12%', country: 'SG' },
-                    { id: '2', name: 'GP-Fast 5G Turbo Boost (Grameenphone)', provider: 'GP 5G Booster', ping: '6ms', load: '18%', country: 'BD' },
-                    { id: '3', name: 'Robi High-Speed Multipath Saver', provider: 'Robi Save', ping: '8ms', load: '15%', country: 'BD' },
-                    { id: '4', name: 'Banglalink Low-Latency CricEdge', provider: 'BL CricEdge', ping: '10ms', load: '21%', country: 'BD' },
-                    { id: '5', name: 'Airtel CDN Speed Booster 4K', provider: 'Airtel 4K Max', ping: '12ms', load: '22%', country: 'BD' },
-                    { id: '6', name: 'Doha Fast Line (Qatar Cricket Server)', provider: 'Doha Sports', ping: '32ms', load: '41%', country: 'QA' },
-                    { id: '7', name: 'Mumbai Dedicated Sports Feed', provider: 'Mumbai Host', ping: '18ms', load: '35%', country: 'IN' },
-                    { id: '8', name: 'Sleek Low Data Saver (Cellular Opt)', provider: 'Low-Data Opt', ping: '13ms', load: '9%', country: 'US' },
-                    { id: '10', name: 'Teletalk Freedom Stream Optimizer', provider: 'Teletalk Fast', ping: '16ms', load: '5%', country: 'BD' },
-                    { id: '11', name: 'Tokyo Fast Router 4K Video Base', provider: 'Tokyo Stream', ping: '29ms', load: '14%', country: 'JP' },
-                    { id: '12', name: 'Frankfurt Direct CDN Bypass Feed', provider: 'Germany Route', ping: '48ms', load: '32%', country: 'DE' },
-                    { id: '13', name: 'London VIP Backhaul Server 1', provider: 'London VIP', ping: '55ms', load: '8%', country: 'UK' },
-                    { id: '14', name: 'Sydney CricEdge Live Relaying Port', provider: 'Australia Cric', ping: '62ms', load: '11%', country: 'AU' },
-                    { id: '15', name: 'Automatic Cloud Balance Routing', provider: 'Auto DNS', ping: '5ms', load: '3%' }
-                  ].map((srv) => (
-                    <button
-                      key={srv.id}
-                      onClick={() => {
-                        setConnectingServer(srv.provider);
-                        setTimeout(() => {
-                          setConnectingServer('');
-                          setActiveServer(srv.name);
-                          localStorage.setItem('site_active_server', srv.name);
-                        }, 1200);
-                      }}
-                      disabled={!!connectingServer}
-                      style={{ contentVisibility: 'auto' }}
-                      className={`shrink-0 flex flex-col items-start gap-1 p-2 py-1.5 rounded-lg border text-left cursor-pointer transition-all active:scale-95 duration-100 min-w-[115px]
-                        ${activeServer === srv.name
-                          ? 'bg-sky-500/10 border-sky-400 shadow shadow-sky-400/20'
-                          : 'bg-slate-950 hover:bg-slate-900 border-slate-805'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-[10px] font-bold text-slate-205">{srv.provider}</span>
-                        <span className="text-[8px] text-slate-500 font-mono">{srv.ping}</span>
-                      </div>
-                      <div className="flex items-center justify-between w-full text-[8px] text-slate-400 leading-none">
-                        <span>Load: {srv.load}</span>
-                        <span className="text-[8px] font-bold text-sky-450">Active</span>
-                      </div>
-                    </button>
-                  ))}
+                    { id: '1', eng: '1', ben: '১', ping: '12ms', load: '14%' },
+                    { id: '2', eng: '2', ben: '২', ping: '18ms', load: '19%' },
+                    { id: '3', eng: '3', ben: '৩', ping: '15ms', load: '22%' },
+                    { id: '4', eng: '4', ben: '৪', ping: '20ms', load: '28%' }
+                  ].map((srv) => {
+                    const isActive = activeServerId === srv.id;
+                    return (
+                      <button
+                        key={srv.id}
+                        onClick={() => {
+                          setConnectingServer(srv.ben);
+                          setTimeout(() => {
+                            setConnectingServer('');
+                            setActiveServerId(srv.id);
+                            setActiveServer(`Server ${srv.eng}`);
+                            localStorage.setItem('site_active_server_id', srv.id);
+                            localStorage.setItem('site_active_server', `Server ${srv.eng}`);
+                          }, 800);
+                        }}
+                        disabled={!!connectingServer}
+                        className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all duration-200 active:scale-95 cursor-pointer
+                          ${isActive
+                            ? 'bg-pink-500/10 border-pink-505 text-pink-400 shadow shadow-pink-500/10'
+                            : 'bg-slate-950 hover:bg-slate-850 border-slate-850 text-slate-400 hover:text-slate-200'
+                          }
+                        `}
+                      >
+                        <span className="text-sm font-extrabold">{srv.ben}</span>
+                        <div className="flex flex-col items-center text-[7px] font-mono text-slate-505 leading-none mt-0.5">
+                          <span>{srv.ping}</span>
+                          <span className="text-[6px] opacity-70">Load: {srv.load}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* PERSONALIZED USER CHOSEN FAVORITE MATCH DAY BUMPER & PREFERENCES */}
-              <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-400 animate-bounce" />
-                    <span>আপনার প্রিয় দল নির্বাচন (Favorite Team)</span>
-                  </span>
-                  {favoriteTeam ? (
-                    <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                      {favoriteTeam} Selected 🌟
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded animate-pulse">
-                      Pending Select
-                    </span>
-                  )}
-                </div>
 
-                {/* Introductory Bumper Player teaser simulation */}
-                {showIntroBumper && bumperTeam && (
-                  <div className="relative overflow-hidden bg-slate-950 border border-indigo-950 p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2 animate-fade-in my-1.5">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/10 via-amber-900/10 to-transparent pointer-events-none" />
-                    <span className="text-3xl animate-bounce">🎈</span>
-                    <h5 className="text-[12px] font-extrabold text-amber-400 tracking-tight">
-                      {bumperTeam} Live Intro-Bumper Stream!
-                    </h5>
-                    <p className="text-[10px] text-slate-300 leading-normal max-w-xs font-sans">
-                      আপনার নির্বাচিত ভালোবাসার দল ৪কে আল্ট্রা-এইচডি সার্ভারে অপ্টিমাইজড হচ্ছে। কোনো বাফারিং বা লেটেন্সি ছাড়া সরাসরি উপভোগ করুন!
-                    </p>
-                    <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-2">
-                      <div className="h-full bg-gradient-to-r from-emerald-400 to-indigo-500 animate-[pulse_1.5s_infinite]" style={{ width: '85%' }} />
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowIntroBumper(false);
-                        setBumperTeam('');
-                      }}
-                      className="mt-2 text-[9px] text-slate-500 hover:text-slate-350 underline cursor-pointer"
-                    >
-                      Skip Teaser Overlay
-                    </button>
-                  </div>
-                )}
-
-                {/* Team Selection pills row */}
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {[
-                    { name: 'বাংলাদেশ 🇧🇩', key: 'Bangladesh' },
-                    { name: 'আর্জেন্টিনা 🇦🇷', key: 'Argentina' },
-                    { name: 'ব্রাজিল 🇧🇷', key: 'Brazil' },
-                    { name: 'ভারত 🇮🇳', key: 'India' },
-                    { name: 'পাকিস্তান 🇵🇰', key: 'Pakistan' },
-                    { name: 'জার্মানি 🇩🇪', key: 'Germany' },
-                    { name: 'পর্তুগাল 🇵🇹', key: 'Portugal' }
-                  ].map((team) => (
-                    <button
-                      key={team.key}
-                      onClick={() => {
-                        setFavoriteTeam(team.name);
-                        localStorage.setItem('user_favorite_team', team.name);
-                        setBumperTeam(team.name);
-                        setShowIntroBumper(true);
-                        // Auto-hide the bumper screen after 4 seconds
-                        setTimeout(() => {
-                          setShowIntroBumper(false);
-                          setBumperTeam('');
-                        }, 4500);
-                      }}
-                      className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border cursor-pointer transition-all active:scale-95
-                        ${favoriteTeam === team.name
-                          ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border-amber-450 text-amber-300 shadow shadow-amber-500/10'
-                          : 'bg-slate-950 hover:bg-slate-850 border-slate-805 text-slate-400 hover:text-white'
-                        }
-                      `}
-                    >
-                      {team.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
-          {/* RIGHT PANEL: Search, Categories & Channel Grid (Takes 7 Cols on desktop) */}
-          <div className="lg:col-span-7 flex flex-col gap-5">
+          {/* MIDDLE PANEL: Search, Categories & Channel Grid (Takes 8 Cols on desktop for expanded beautiful view) */}
+          <div className="lg:col-span-8 flex flex-col gap-5">
             
             {/* TOP BANNER AD SLOT */}
             {adCodes.topBanner && (
@@ -3175,15 +3663,15 @@ export default function App() {
                         onClick={() => setSelectedGroup(cat.id)}
                         className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg shrink-0 transition-all duration-200 cursor-pointer border
                           ${isActive 
-                            ? 'bg-sky-605 hover:bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-950/40' 
+                            ? 'bg-gradient-to-r from-pink-500 to-rose-500 border-pink-400 text-white shadow-lg shadow-pink-950/40' 
                             : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-800 hover:text-slate-200 hover:bg-slate-900'
                           }
                         `}
                       >
-                        {cat.id === 'favorites' && <Heart className={`w-3.5 h-3.5 ${isActive ? 'fill-white' : 'text-sky-500 fill-sky-500'}`} />}
+                        {cat.id === 'favorites' && <Heart className={`w-3.5 h-3.5 ${isActive ? 'fill-white' : 'text-pink-500 fill-pink-500'}`} />}
                         <span>{cat.nameBangla}</span>
                         <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold
-                          ${isActive ? 'bg-sky-700 text-white' : 'bg-slate-900 text-slate-500'}
+                          ${isActive ? 'bg-pink-700 text-white' : 'bg-slate-900 text-slate-500'}
                         `}>
                           {count}
                         </span>
@@ -3198,7 +3686,7 @@ export default function App() {
             <div className="flex flex-col gap-3">
               <div className="flex justify-between items-center px-1 text-slate-400 font-sans">
                 <span className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider">
-                  <ListFilter className="w-4 h-4 text-sky-400" /> চ্যানেলসমূহ
+                  <ListFilter className="w-4 h-4 text-pink-405" /> চ্যানেলসমূহ
                 </span>
                 
                 <span className="text-2xs font-mono text-slate-500">
@@ -3211,7 +3699,7 @@ export default function App() {
                 <div id="loader-fallback-block" className="bg-slate-900/60 border border-slate-900 rounded-2xl p-16 text-center shadow-xl">
                   <div className="relative w-12 h-12 mx-auto mb-4">
                     <span className="absolute inset-0 border-3 border-slate-800 rounded-full"></span>
-                    <span className="absolute inset-0 border-3 border-sky-500 rounded-full animate-spin border-t-transparent"></span>
+                    <span className="absolute inset-0 border-3 border-pink-500 rounded-full animate-spin border-t-transparent"></span>
                   </div>
                   <h3 className="text-sm font-semibold text-slate-300">চ্যানেল লোড হচ্ছে...</h3>
                 </div>
@@ -3249,7 +3737,7 @@ export default function App() {
               ) : (
                 // Dynamic viewport optimized slicer (ONLY renders visibleCount initially to secure 60FPS UI response speeds)
                 <div className="flex flex-col gap-5">
-                  <div id="channels-result-scroller" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 max-h-[500px] lg:max-h-[calc(100vh-365px)] overflow-y-auto pr-1 pb-4 scrollbar-thin scrollbar-thumb-slate-850">
+                  <div id="channels-result-scroller" className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 sm:gap-3 md:gap-4 lg:gap-3 xl:gap-4 max-h-[500px] lg:max-h-[calc(100vh-365px)] overflow-y-auto pr-1 pb-4 scrollbar-thin scrollbar-thumb-slate-850">
                     {filteredChannels.slice(0, visibleCount).map((ch) => (
                       <ChannelCard
                         key={ch.id}
@@ -3304,12 +3792,343 @@ export default function App() {
         onSave={handleUpdateProfile}
       />
 
-      {/* Live Help & Support Chat floating console overlay */}
-      <SupportChat
-        isOpen={isSupportModalOpen}
-        onClose={() => setIsSupportModalOpen(false)}
-        currentUser={currentUser}
-      />
+      {/* EXCLUSIVE SIDEBAR DRAWER INTERFACE */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <div 
+            id="mobile-sidebar-backdrop"
+            className="fixed inset-0 z-[9999] flex bg-black/65 backdrop-blur-xs transition-opacity overflow-hidden w-full h-full"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-80 h-full bg-slate-950 border-r border-slate-900 flex flex-col shadow-2xl relative"
+            >
+              {/* Header Box mirroring screenshot */}
+              <div className="p-4 border-b border-slate-900 flex items-center justify-between select-none shrink-0 bg-slate-950">
+                <div className="flex items-center gap-2.5">
+                  <FreeWorldCupBDLogo className="w-10 h-10 shrink-0" />
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm font-black text-amber-400">
+                      অবিরামTV
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-bold font-sans">
+                      গতিহীন পথ চলা...
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Close Button matching yellow highlighting */}
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl border-amber-400/60 border bg-amber-400/10 text-amber-450 hover:bg-amber-400/20 active:scale-95 transition-all text-xs font-bold cursor-pointer"
+                  title="বন্ধ করুন"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Sidebar Content Scroll Area */}
+              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6 custom-scrollbar text-left select-none bg-slate-950">
+                
+                {/* 1. EXCLUSIVE CATEGORY */}
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">
+                    EXCLUSIVE
+                  </span>
+                  
+                  {/* Sportz Live Button */}
+                  <button
+                    onClick={() => {
+                      setSelectedGroup('Sports');
+                      setSearchQuery('');
+                      setIsSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/80 border transition-all cursor-pointer group text-left
+                      ${selectedGroup === 'Sports' ? 'border-pink-500/40 bg-pink-500/10' : 'border-slate-900 hover:border-slate-800'}
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                      <span className="text-xs font-extrabold text-slate-200 group-hover:text-white transition-colors">
+                        Sportz Live
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-black text-white bg-pink-550 px-2 py-0.5 rounded shadow-sm">
+                      LIVE
+                    </span>
+                  </button>
+
+                  {/* BDIX Live Button */}
+                  <button
+                    onClick={() => {
+                      setSelectedGroup('Bangla');
+                      setSearchQuery('bdix');
+                      setIsSidebarOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/80 border border-slate-900 hover:border-slate-800 transition-all cursor-pointer group text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Monitor className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-extrabold text-slate-200 group-hover:text-white transition-colors">
+                        BDIX Live
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-black text-white bg-pink-550 px-2 py-0.5 rounded shadow-sm">
+                      NEW
+                    </span>
+                  </button>
+                </div>
+
+                {/* 2. SETTINGS CATEGORY */}
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">
+                    SETTINGS
+                  </span>
+
+                  {/* Remember Last Active toggle */}
+                  <div
+                    onClick={() => setRememberLast(prev => !prev)}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/80 border border-slate-900 hover:border-slate-800 transition-all cursor-pointer group text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <RefreshCw className="w-4 h-4 text-sky-450" />
+                      <span className="text-xs font-extrabold text-slate-200 group-hover:text-white transition-colors">
+                        Remember Last ...
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded
+                      ${rememberLast ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/20' : 'text-slate-400 bg-slate-900'}
+                    `}>
+                      {rememberLast ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. COMMUNICATE CATEGORY */}
+                <div className="flex flex-col gap-1.5 border-t border-slate-900/60 pt-4">
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest pl-1 mb-1.5">
+                    COMMUNICATE
+                  </span>
+
+                  {/* Telegram */}
+                  <a
+                    href={siteSettings.telegramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/80 hover:pl-3.5 transition-all text-xs font-bold"
+                  >
+                    <Zap className="w-4 h-4 text-sky-400 shrink-0 select-none rotate-45" />
+                    <span>Telegram</span>
+                  </a>
+
+                  {/* Contact */}
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      setIsSupportModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/85 hover:pl-3.5 transition-all text-xs font-bold cursor-pointer text-left"
+                  >
+                    <HelpCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Contact</span>
+                  </button>
+
+                  {/* Support Us */}
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      setIsDonationModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/85 hover:pl-3.5 transition-all text-xs font-bold cursor-pointer text-left"
+                  >
+                    <Heart className="w-4 h-4 text-pink-500 shrink-0 fill-pink-500/20" />
+                    <span>Support Us</span>
+                  </button>
+
+                  {/* Share Content */}
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      if (navigator.share) {
+                        navigator.share({
+                          title: siteNameEnglish,
+                          text: `BD Live TV - সরাসরি ক্রিকেট খেলা এবং বিনোদন উপভোগ করুন সম্পূর্ণ ফ্রিতে!`,
+                          url: window.location.href,
+                        }).catch(() => {});
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        alert('লিঙ্কটি কপি করা হয়েছে! আপনার বন্ধুদের সাথে শেয়ার করুন।');
+                      }
+                    }}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/85 hover:pl-3.5 transition-all text-xs font-bold cursor-pointer text-left"
+                  >
+                    <Share2 className="w-4 h-4 text-sky-400 shrink-0" />
+                    <span>Share</span>
+                  </button>
+
+                  {/* Update App */}
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      handleTriggerUpdateFlow();
+                    }}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/85 hover:pl-3.5 transition-all text-xs font-bold cursor-pointer text-left"
+                  >
+                    <Download className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Update App</span>
+                  </button>
+
+                  {/* Copyright */}
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      setIsCopyrightModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/85 hover:pl-3.5 transition-all text-xs font-bold cursor-pointer text-left"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-teal-400 shrink-0" />
+                    <span>Copyright</span>
+                  </button>
+
+                  {/* Exit */}
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      setCurrentPage('landing');
+                    }}
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl text-slate-300 hover:text-rose-455 hover:bg-rose-950/15 hover:pl-3.5 transition-all text-xs font-bold cursor-pointer text-left border-t border-slate-900/80 mt-2.5 pt-3"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span>Exit</span>
+                  </button>
+                </div>
+
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SUPPORT US / DONATION SPECIFIC MODAL */}
+      <AnimatePresence>
+        {isDonationModalOpen && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs select-none">
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.93, opacity: 0 }}
+              className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl relative text-left"
+            >
+              <button 
+                onClick={() => setIsDonationModalOpen(false)}
+                className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mb-4 text-pink-500">
+                <Heart className="w-6 h-6 fill-pink-500/10 animate-pulse" />
+              </div>
+
+              <h3 className="text-sm font-extrabold text-slate-100 tracking-tight leading-none">সাপোর্ট করুন (Support Us)</h3>
+              <p className="text-[10px] text-pink-400 font-extrabold uppercase mt-1 tracking-wider font-sans">Sustain Our Free HD Streams</p>
+              
+              <div className="text-xs text-slate-350 mt-4 leading-relaxed font-sans flex flex-col gap-3">
+                <p>
+                  BD LIVE TV সম্পূর্ণ ফ্রিতে কোনো প্রকার বাফার ছাড়াই খেলাধুলা এবং বিনোদন ভোগ করার প্লাটফর্ম। এই ফ্রি সার্ভিস চালু রাখতে আমাদের প্রতিমাসে সার্ভার ও ব্যান্ডউইথ খরচ বহন করতে হয়।
+                </p>
+                <p className="border-l-2 border-pink-500 pl-3.5 text-slate-200 font-bold">
+                  আপনার সামান্য সহযোগিতা আমাদের টিমকে আরো নতুন হাই-স্পিড চ্যানেল লিঙ্ক যোগ করতে এবং সচল রাখতে সাহায্য করবে।
+                </p>
+              </div>
+
+              {/* Donation options */}
+              <div className="mt-5 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between p-3 bg-slate-950 border border-slate-850 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-pink-550" />
+                    <span className="text-2xs font-extrabold text-slate-350 uppercase">bKash / Nagad:</span>
+                  </div>
+                  <span className="text-xs font-mono font-black text-pink-400 select-all tracking-wider">০১৮৭৭-৪৬৬৫৭৪</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-slate-950 border border-slate-850 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-violet-500" />
+                    <span className="text-2xs font-extrabold text-slate-350 uppercase">Rocket (Personal):</span>
+                  </div>
+                  <span className="text-xs font-mono font-black text-violet-450 select-all tracking-wider">০১৮৭৭-৪৬৬৫৭৪-২</span>
+                </div>
+              </div>
+
+              <div className="mt-5.5 flex items-center justify-end">
+                <button
+                  onClick={() => setIsDonationModalOpen(false)}
+                  className="px-5 py-2 bg-pink-600 hover:bg-pink-505 text-white text-xs font-extrabold rounded-xl transition-colors cursor-pointer active:scale-95 shadow"
+                >
+                  ঠিক আছে, ধন্যবাদ
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* COPYRIGHT / DMCA POLICY MODAL */}
+      <AnimatePresence>
+        {isCopyrightModalOpen && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs select-none">
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.93, opacity: 0 }}
+              className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl relative text-left"
+            >
+              <button 
+                onClick={() => setIsCopyrightModalOpen(false)}
+                className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4 text-teal-400">
+                <AlertTriangle className="w-6 h-6 animate-bounce" />
+              </div>
+
+              <h3 className="text-sm font-extrabold text-slate-100 tracking-tight leading-none">কপিরাইট নীতিমালা (DMCA Compliance)</h3>
+              <p className="text-[10px] text-teal-400 font-extrabold uppercase mt-1 tracking-wider font-sans">Legal Integrity & Compliance</p>
+              
+              <div className="text-xs text-slate-350 mt-4 leading-relaxed font-sans flex flex-col gap-3">
+                <p>
+                  BD LIVE TV / Obiram TV স্ট্রিমিং লিঙ্কগুলি সরাসরি নিজেরা হোস্ট বা আপলোড করে না। এখানে প্রদর্শিত সমস্ত মিডিয়া এবং টিভি ফিড ইন্টারনেটে প্রকাশ্যে উপলব্ধ পাবলিক সোর্স ও m3u প্লেলিস্ট থেকে স্বয়ংক্রিয়ভাবে ইনডেক্সড।
+                </p>
+                <p className="border-l-2 border-teal-500 pl-3.5 text-slate-250 font-bold leading-normal">
+                  আমরা মেধাস্বত্ব এবং কপিরাইট আইনের প্রতি যথোচিত শ্রদ্ধাশীল।
+                </p>
+                <p className="text-[11px] text-slate-400/90 leading-relaxed">
+                  যদি কোনো নির্দিষ্ট স্পোর্টস ফিড বা সামগ্রীর বৈধ সত্যাধিকারী আপনি হয়ে থাকেন এবং আপত্তি জানাতে চান, তবে অনুগ্রহ করে আমাদের লাইভ এজেন্ট হেল্পডেস্কে মেসেজ পাঠান, আমরা কপিরাইট ক্লেইম পাওয়ার সাথে সাথেই চ্যানেল স্ট্রিমটি রিমুভ করে দেব।
+                </p>
+              </div>
+
+              <div className="mt-5.5 flex items-center justify-end">
+                <button
+                  onClick={() => setIsCopyrightModalOpen(false)}
+                  className="px-5 py-2 bg-teal-600 hover:bg-teal-505 text-white text-xs font-extrabold rounded-xl transition-colors cursor-pointer active:scale-95 shadow"
+                >
+                  সম্মত আছি
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Live Help & Support Chat floating console overlay removed since it is now embedded inline */}
 
       {/* Dynamic APK & Version Update Check Notice Dialog */}
       {isUpdateCheckerOpen && (
@@ -3988,9 +4807,7 @@ export default function App() {
                       </button>
                       
                       <button
-                        onClick={() => {
-                          alert(`আপনার সাকসেসফুল ওয়েবসাইট কনফিগারেশন ব্যাকআপ কপি জেনারেট করা হয়েছে!\nআপনার ব্রাউজারে এটি ডাউনলোড বা সেভ রাখা হয়েছে।`);
-                        }}
+                        onClick={handleDownloadHTMLUserPanel}
                         className="py-1.5 px-3 bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[10px] rounded transition-all cursor-pointer"
                       >
                         📥 ডাউনলোড করুন সম্পূর্ণ HTML কোড (Export Config)
@@ -4018,6 +4835,47 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+      {/* Floating Customer Support Chat Button & Overlay Sheet */}
+      {currentPage === 'app' && (
+        <>
+          {/* Floating Circle Button with pulsing glow */}
+          <button
+            id="floating-live-support-button"
+            onClick={() => setIsSupportModalOpen(true)}
+            className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[999] w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-600 text-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group cursor-pointer border border-emerald-400/40 select-none animate-fade-in"
+            title="লাইভ সাপোর্ট চ্যাট"
+          >
+            {/* Pulsing ring */}
+            <span className="absolute -inset-1.5 rounded-full bg-emerald-500/20 animate-ping opacity-60" style={{ animationDuration: '3s' }} />
+            
+            <div className="relative flex items-center justify-center">
+              <MessageSquare className="w-6 h-6 md:w-7 md:h-7 text-white" />
+              
+              {/* Online Green Pill badge */}
+              {supportEnabled && (
+                <span className="absolute -top-3 -right-3 flex h-3.5 w-3.5" title="এজেন্ট অনলাইন">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-400 border border-slate-950"></span>
+                </span>
+              )}
+            </div>
+
+            {/* Hover Tooltip/Badge */}
+            <span className="absolute right-16 md:right-18 bg-slate-900/95 border border-slate-850 text-[10px] md:text-sm font-black text-slate-200 py-1.5 px-3 rounded-xl shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-250 select-none pointer-events-none tracking-wide">
+              💬 লাইভ সাপোর্ট (অনলাইন)
+            </span>
+          </button>
+
+          {/* Render real non-inline drawer chat overlay inside App */}
+          <SupportChat
+            isOpen={isSupportModalOpen}
+            onClose={() => setIsSupportModalOpen(false)}
+            currentUser={currentUser}
+            isInline={false}
+          />
+        </>
+      )}
     </div>
   );
 }

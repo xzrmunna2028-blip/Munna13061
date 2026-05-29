@@ -204,16 +204,18 @@ function sanitizeChannelName(name: string): string {
     .replace(/♛/g, '')        // Remove crown symbols
     .replace(/\|/g, '')       // Remove pipes
     .replace(/[-_]/g, ' ')    // Replace hyphens/underscores with space
+    .replace(/\bw\s*300\s*q\b/gi, '') // Strip specific leaked query param patterns "w 300 q"
+    .replace(/\bw300q\b/gi, '')
     .replace(/\b(hd|sd|fhd|uhd|4k|stream|server\s*\d+|backup|direct|link\s*\d+)\b/gi, '') // Strip typical suffix qualities
     .replace(/\s+/g, ' ')     // Normalize whitespaces
     .trim();
 
   // Normalize common duplicate channel display names
-  const upper = cleaned.toUpperCase();
-  if (upper === 'SOMOY TV' || upper === 'SOMOY NEWS TV' || upper === 'SOMOY NEWS' || upper === 'SOMOY') {
+  const upper = cleaned.toUpperCase().trim();
+  if (upper === 'SOMOY TV' || upper === 'SOMOY NEWS TV' || upper === 'SOMOY NEWS' || upper === 'SOMOY' || upper === 'SOMOY NEWS LIVE') {
     return 'Somoy TV';
   }
-  if (upper === 'JAMUNA TV' || upper === 'JAMUNA NEWS' || upper === 'JAMUNA') {
+  if (upper === 'JAMUNA TV' || upper === 'JAMUNA NEWS' || upper === 'JAMUNA' || upper === 'JAMUNA NEWS LIVE') {
     return 'Jamuna TV';
   }
   if (upper === 'GAZI TV' || upper === 'GTV' || upper === 'GTV HD' || upper === 'GAZI TV HD' || upper === 'GAZI') {
@@ -268,7 +270,59 @@ function sanitizeChannelName(name: string): string {
     return 'Ekushey TV';
   }
 
+  // Handle purely numeric names after stripping (like "300")
+  if (!cleaned || /^\d+$/.test(cleaned) || cleaned.toLowerCase() === 'stream' || cleaned.toLowerCase() === 'live') {
+    if (/^\d+$/.test(cleaned)) {
+      return `IPTV Channel ${cleaned}`;
+    }
+    return 'Live IPTV Channel';
+  }
+
   return cleaned;
+}
+
+// Map high-fidelity fallback logo icons to ensure non-empty graphics for top channels
+function assignDefaultLogo(name: string, logo: string): string {
+  if (logo && logo.trim().length > 15) {
+    return logo;
+  }
+  const upper = name.toUpperCase().trim();
+
+  // Precise mappings matching the Akash and Aynaott CDN vectors
+  if (upper.includes('SOMOY')) {
+    return "https://tstatic.akash-go.com/cms-ui/images/custom-content/1735560559088.png";
+  }
+  if (upper.includes('JAMUNA')) {
+    return "https://tstatic.akash-go.com/cms-ui/images/custom-content/1735560213832.png";
+  }
+  if (upper.includes('T SPORTS') || upper.includes('TSPORTS')) {
+    return "https://s3.aynaott.com/storage/dbc585f70a60b9855b6e13a8ce4cb6f4";
+  }
+  if (upper.includes('GTV') || upper.includes('GAZI')) {
+    return "https://s3.aynaott.com/storage/417a833f6d83021c99bfc3d4176610f4";
+  }
+  if (upper.includes('CHANNEL 24') || upper.includes('CHANNEL24')) {
+    return "https://tstatic.akash-go.com/cms-ui/images/custom-content/1735556516924.png";
+  }
+  if (upper.includes('BTV NATIONAL')) {
+    return "https://s3.aynaott.com/storage/9b6f35f73a099b7a5885a970523c5f78";
+  }
+  if (upper.includes('BTV WORLD')) {
+    return "https://s3.aynaott.com/storage/b30147b97d86754e4b97fc2989628391";
+  }
+
+  // General Category Graphic Assets for generic empty slots
+  if (upper.includes('SPORTS') || upper.includes('CRICKET') || upper.includes('FOOTBALL') || upper.includes('TEN') || upper.includes('SONY')) {
+    return "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=120&fit=crop&q=60";
+  }
+  if (upper.includes('NEWS') || upper.includes('খবর') || upper.includes('সময়') || upper.includes('যমুনা')) {
+    return "https://images.unsplash.com/photo-1495020689067-958852a6565d?w=120&fit=crop&q=60";
+  }
+  if (upper.includes('BANGLA') || upper.includes('TV') || upper.includes('বিডি') || upper.includes('BD')) {
+    return "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=120&fit=crop&q=60";
+  }
+
+  return "https://images.unsplash.com/photo-1540747737956-378724044453?w=120&fit=crop&q=60";
 }
 
 // Highly robust and precise categorizer for sports, news, music, movies, kids, bangla, and general streams
@@ -365,6 +419,25 @@ function categorizeChannel(name: string, m3uGroup: string): string {
     return 'Kids';
   }
 
+  // 5.5. Indian Series
+  if (
+    normName.includes('star jalsha') || 
+    normName.includes('zee bangla') || 
+    normName.includes('colors bangla') || 
+    normName.includes('sun bangla') || 
+    normName.includes('sony aath') ||
+    normName.includes('star plus') ||
+    normName.includes('colors tv') ||
+    normName.includes('zee tv') ||
+    normName.includes('sony sab') ||
+    normName.includes('sony tv') ||
+    normGroup.includes('indian serial') ||
+    normGroup.includes('indian series') ||
+    normGroup.includes('hindi serial')
+  ) {
+    return 'Indian Series';
+  }
+
   // 6. Bangla
   if (
     normName.includes('bengali') || 
@@ -391,11 +464,6 @@ function categorizeChannel(name: string, m3uGroup: string): string {
     normName.includes('mohona') || 
     normName.includes('my tv') || 
     normName.includes('ananda') || 
-    normName.includes('star jalsha') || 
-    normName.includes('zee bangla') || 
-    normName.includes('colors bangla') || 
-    normName.includes('sun bangla') || 
-    normName.includes('sony aath') || 
     normGroup.includes('bangla') || 
     normGroup.includes('bengali') || 
     normGroup.includes('bd') || 
@@ -484,7 +552,9 @@ function parseM3UContent(content: string, playlistName: string): Channel[] {
         currentMeta = null;
       } else {
         // Discovered URL without preceding EXTINF information
-        const urlParts = streamUrl.split('/');
+        // Strip query params so we don't leak strings like ?w=300&q=...
+        const cleanUrlPart = streamUrl.split('?')[0].trim();
+        const urlParts = cleanUrlPart.split('/');
         const textLabel = urlParts[urlParts.length - 1]
           .replace(/\.m3u8|\.m3u|\.ts/gi, '')
           .replace(/[-_]/g, ' ');
@@ -643,6 +713,8 @@ async function fetchAllChannels(): Promise<Channel[]> {
   mergedRawList.forEach((ch) => {
     // Standardize name first
     ch.name = sanitizeChannelName(ch.name);
+    // Dynamically assign high-fidelity default logo if missing
+    ch.logo = assignDefaultLogo(ch.name, ch.logo);
 
     const rawUrl = ch.url.toLowerCase().trim();
     // Unique key on canonical name (all lowercase, no spaces, no special characters)
@@ -845,19 +917,12 @@ const STATS_FILE = path.join(process.cwd(), 'site_stats.json');
 
 // GET brand settings (persisted server-side on disk)
 app.get('/api/branding', (req, res) => {
-  try {
-    if (fs.existsSync(BRAND_CONFIG_FILE)) {
-      const data = fs.readFileSync(BRAND_CONFIG_FILE, 'utf-8');
-      return res.json(JSON.parse(data));
-    }
-  } catch (e) {
-    console.error('Error reading branding config:', e);
-  }
+  const s = readSiteSettings();
   return res.json({
-    siteLogoUrl: '',
-    siteNameBangla: 'বিডি লাইভ টিভি',
-    siteNameEnglish: 'BD LIVE TV',
-    marqueeText: 'স্বাগতম Free World Cup BD-তে! 📺 সম্পুর্ণ ফ্রিতে স্পোর্টস প্লেয়ারে উপভোগ করুন প্রিয় সব লাইভ ওয়ার্ল্ড কাপ, ঘরোয়া ও আন্তর্জাতিক খেলাধুলা এবং বিনোদন চ্যানেল। কোনো চ্যানেল সাময়িকভাবে বন্ধ থাকলে রিফ্রেশ বাটনে ক্লিক করুন অথবা প্লেয়ারে অন্য লিংক অপশন সিলেক্ট করুন। আমরা নিয়মিত নতুন নতুন লাইভ চ্যানেল ও ফিড এড করছি। আমাদের সাথেই থাকুন!'
+    siteLogoUrl: s.siteLogoUrl,
+    siteNameBangla: s.siteNameBangla,
+    siteNameEnglish: s.siteNameEnglish,
+    marqueeText: s.marqueeText
   });
 });
 
@@ -914,9 +979,20 @@ app.post('/api/stats/login', (req, res) => {
 app.post('/api/branding', (req, res) => {
   try {
     const { siteLogoUrl, siteNameBangla, siteNameEnglish, marqueeText } = req.body;
-    const config = { siteLogoUrl, siteNameBangla, siteNameEnglish, marqueeText };
-    fs.writeFileSync(BRAND_CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
-    return res.json({ success: true, config });
+    const current = readSiteSettings();
+    const updated = {
+      ...current,
+      siteLogoUrl: siteLogoUrl !== undefined ? siteLogoUrl : current.siteLogoUrl,
+      siteNameBangla: siteNameBangla !== undefined ? siteNameBangla : current.siteNameBangla,
+      siteNameEnglish: siteNameEnglish !== undefined ? siteNameEnglish : current.siteNameEnglish,
+      marqueeText: marqueeText !== undefined ? marqueeText : current.marqueeText,
+    };
+    writeSiteSettings(updated);
+    
+    // Backup helper sync
+    fs.writeFileSync(BRAND_CONFIG_FILE, JSON.stringify({ siteLogoUrl, siteNameBangla, siteNameEnglish, marqueeText }, null, 2), 'utf-8');
+    
+    return res.json({ success: true, config: updated });
   } catch (e: any) {
     console.error('Error writing branding config:', e);
     return res.status(500).json({ error: e.message });
@@ -1035,39 +1111,54 @@ ${conversationSnippet}
 
 Generate the agent message responding to the User politely, naturally, in their language, in under 2 sentences. DO NOT prefix with "Agent:" or "Bongo Support Agent:".`;
 
-      let modelResponse;
       const imgContent = lastMsg.attachmentUrl ? parseDataUrl(lastMsg.attachmentUrl) : null;
-
-      if (imgContent && lastMsg.attachmentType === 'image') {
-        const imgPart = {
-          inlineData: {
-            mimeType: imgContent.mimeType,
-            data: imgContent.data
-          }
-        };
-        const txtPart = {
-          text: `${userPrompt}\n\n[Note: Please inspect the attached user screenshot above and handle their streaming/app error visually.]`
-        };
-        modelResponse = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: { parts: [imgPart, txtPart] },
-          config: {
-            systemInstruction: SUPPORT_SYSTEM_INSTRUCTION,
-            temperature: 0.7
-          }
-        });
-      } else {
-        modelResponse = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: userPrompt,
-          config: {
-            systemInstruction: SUPPORT_SYSTEM_INSTRUCTION,
-            temperature: 0.7
-          }
-        });
+      let replyText = '';
+      try {
+        let modelResponse;
+        if (imgContent && lastMsg.attachmentType === 'image') {
+          const imgPart = {
+            inlineData: {
+              mimeType: imgContent.mimeType,
+              data: imgContent.data
+            }
+          };
+          const txtPart = {
+            text: `${userPrompt}\n\n[Note: Please inspect the attached user screenshot above and handle their streaming/app error visually.]`
+          };
+          modelResponse = await ai.models.generateContent({
+            model: 'gemini-3.5-flash',
+            contents: { parts: [imgPart, txtPart] },
+            config: {
+              systemInstruction: SUPPORT_SYSTEM_INSTRUCTION,
+              temperature: 0.7
+            }
+          });
+        } else {
+          modelResponse = await ai.models.generateContent({
+            model: 'gemini-3.5-flash',
+            contents: userPrompt,
+            config: {
+              systemInstruction: SUPPORT_SYSTEM_INSTRUCTION,
+              temperature: 0.7
+            }
+          });
+        }
+        replyText = modelResponse.text || 'ধন্যবাদ! আমি আপনার বার্তাটি পেয়েছি। আমাদের লাইভ টিম বিষয়টি দেখছে।';
+      } catch (gemIniErr: any) {
+        console.warn('Gemini live support reply engine hit an error (falling back to automatic rule response):', gemIniErr?.message || gemIniErr);
+        
+        // High-quality Bengali rule-based support bot fallback
+        const userText = (lastMsg.text || '').toLowerCase();
+        if (userText.includes('চ্যানেল') || userText.includes('ভিডিও') || userText.includes('বাফারিং') || userText.includes('চলছে না') || userText.includes('সমস্যা')) {
+          replyText = 'জি, চ্যানেলটি লোড হতে কিছুটা সময় লাগার জন্য আন্তরিকভাবে দুঃখিত। অনুগ্রহ করে আপনার ইন্টারনেট কানেকশন চেক করুন, অথবা পেজটি একবার রিফ্রেশ/রিলোড করে নিন।';
+        } else if (userText.includes('টাকা') || userText.includes('পেমেন্ট') || userText.includes('বিকাশ') || userText.includes('রকেট') || userText.includes('নগদ') || userText.includes('ভিআইপি') || userText.includes('অ্যাকাউন্ট')) {
+          replyText = 'ভিআইপি সাবস্ক্রিপশন এবং পেমেন্ট সংক্রান্ত যেকোনো তথ্যের জন্য অনুগ্রহ করে আমাদের হেল্পডেস্কে এবং এডমিন প্যানেলে যোগাযোগ করুন। আমরা সাহায্য করতে প্রস্তুত।';
+        } else if (userText.includes('এডমিন') || userText.includes('হেল্প') || userText.includes('hello') || userText.includes('হাই') || userText.includes('হ্যালো')) {
+          replyText = 'হ্যালো! বিডি লাইভ টিভি সাপোর্ট সেন্টারে আপনাকে স্বাগতম। আপনার টিভি সার্ভিস বা চ্যানেল নিয়ে কোনো প্রশ্ন থাকলে এখানে লিখে পাঠান, আমি সাহায্য করছি।';
+        } else {
+          replyText = 'ধন্যবাদ! আপনার বার্তাটি আমরা পেয়েছি। আমাদের একজন লাইভ টেকনিক্যাল সাপোর্ট স্পেশালিস্ট খুব দ্রুত বিষয়টি দেখে আপনাকে জানাবেন।';
+        }
       }
-
-      const replyText = modelResponse.text || 'ধন্যবাদ! আমি আপনার বার্তাটি পেয়েছি। আমাদের লাইভ টিম বিষয়টি দেখছে।';
 
       // Read and push AI response safely
       const latestSessions = readSupportSessions();
@@ -1087,8 +1178,8 @@ Generate the agent message responding to the User politely, naturally, in their 
         }
         writeSupportSessions(latestSessions);
       }
-    } catch (gemIniErr) {
-      console.error('Gemini live support reply engine hit an error:', gemIniErr);
+    } catch (outerErr) {
+      console.error('Outer error in triggerAISupportReply:', outerErr);
     }
   }, 900); // Instant & snappy 900ms feel
 }
@@ -1368,6 +1459,373 @@ app.post('/api/reports/delete', (req, res) => {
     return res.status(500).json({ error: e.message });
   }
 });
+
+// SERVER-BACKED SITE SETTINGS ENGINE FOR CONFIG, ADS, & MAINTENANCE MODE
+interface CustomAd {
+  id: string;
+  title: string;
+  placement: 'top' | 'bottom' | 'popunder' | 'floating' | 'sidebar';
+  code: string;
+  active: boolean;
+}
+
+interface SiteSettings {
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  telegramUrl: string;
+  siteNameEnglish: string;
+  siteNameBangla: string;
+  marqueeText: string;
+  siteLogoUrl: string;
+  customAds: CustomAd[];
+}
+
+const SETTINGS_FILE = path.join(process.cwd(), 'site_settings.json');
+const USERS_FILE = path.join(process.cwd(), 'users_database.json');
+const MODERATION_FILE = path.join(process.cwd(), 'moderation_database.json');
+const PARTNERS_FILE = path.join(process.cwd(), 'partner_members.json');
+
+function readSiteSettings(): SiteSettings {
+  const defaultSettings: SiteSettings = {
+    maintenanceMode: false,
+    maintenanceMessage: 'সাময়িকভাবে আমাদের ওয়েবসাইট এখন বন্ধ আছে। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন, দ্রুতই আবার চালু করা হবে!',
+    telegramUrl: 'https://t.me/FIFAWorldCupbd1',
+    siteNameEnglish: 'Free World Cup BD',
+    siteNameBangla: 'ফ্রী ওয়ার্ল্ড কাপ বিডি',
+    marqueeText: 'স্বাগতম Free World Cup BD-তে! 📺 সম্পুর্ণ ফ্রিতে স্পোর্টস প্লেয়ারে উপভোগ করুন প্রিয় সব লাইভ ওয়ার্ল্ড কাপ, ঘরোয়া ও আন্তর্জাতিক খেলাধুলা এবং বিনোদন চ্যানেল।',
+    siteLogoUrl: '',
+    customAds: [
+      {
+        id: 'ad_init_1',
+        title: 'প্রথম ব্যানার বিজ্ঞাপন (বিজ্ঞাপন ১)',
+        placement: 'top',
+        code: '<div style="text-align:center; padding: 12px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); color: #38bdf8; font-weight: bold; font-family: sans-serif; border-radius: 12px; font-size: 11px;">🏆 স্পন্সরড অফার: আমাদের অফিশিয়াল অ্যান্ড্রয়েড অ্যাপ ডাউনলোড করতে আমাদের টেলিগ্রাম চ্যানেলে যুক্ত হোন!</div>',
+        active: true
+      }
+    ]
+  };
+
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+      return { ...defaultSettings, ...JSON.parse(data) };
+    }
+  } catch (e) {
+    console.error('Error reading site settings:', e);
+  }
+  return defaultSettings;
+}
+
+function writeSiteSettings(settings: SiteSettings) {
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error writing site settings:', e);
+  }
+}
+
+// Helper functions for Users Database
+function readUsersDb(): any[] {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Error reading users database:', e);
+  }
+  return [];
+}
+
+function writeUsersDb(users: any[]) {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error writing users database:', e);
+  }
+}
+
+// Helper functions for Moderation Stats (Verifications, Bans, Mutes)
+interface ModerationData {
+  verifiedUsers: string[];
+  bannedUsers: string[];
+  mutedUsers: string[];
+}
+
+function readModDb(): ModerationData {
+  const defaultMod: ModerationData = { verifiedUsers: [], bannedUsers: [], mutedUsers: [] };
+  try {
+    if (fs.existsSync(MODERATION_FILE)) {
+      return { ...defaultMod, ...JSON.parse(fs.readFileSync(MODERATION_FILE, 'utf-8')) };
+    }
+  } catch (e) {
+    console.error('Error reading mod database:', e);
+  }
+  return defaultMod;
+}
+
+function writeModDb(mod: ModerationData) {
+  try {
+    fs.writeFileSync(MODERATION_FILE, JSON.stringify(mod, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error writing mod database:', e);
+  }
+}
+
+// Helper functions for Partner Program
+function readPartnersDb(): any[] {
+  try {
+    if (fs.existsSync(PARTNERS_FILE)) {
+      return JSON.parse(fs.readFileSync(PARTNERS_FILE, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Error reading partners database:', e);
+  }
+  return [];
+}
+
+function writePartnersDb(partners: any[]) {
+  try {
+    fs.writeFileSync(PARTNERS_FILE, JSON.stringify(partners, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error writing partners database:', e);
+  }
+}
+
+// GET site settings
+app.get('/api/settings', (req, res) => {
+  res.json(readSiteSettings());
+});
+
+// POST to update site settings
+app.post('/api/settings', (req, res) => {
+  try {
+    const currentSettings = readSiteSettings();
+    const updated = { ...currentSettings, ...req.body };
+    writeSiteSettings(updated);
+    res.json({ success: true, settings: updated });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// User DB API routes
+app.get('/api/users', (req, res) => {
+  res.json({ users: readUsersDb() });
+});
+
+app.post('/api/users/signup', (req, res) => {
+  try {
+    const { user } = req.body;
+    if (!user || !user.email) {
+      return res.status(400).json({ error: 'Missing user object or email field' });
+    }
+    const currentList = readUsersDb();
+    const lowerEmail = user.email.toLowerCase().trim();
+    // Exclude duplicates
+    const filtered = currentList.filter(u => u.email.toLowerCase().trim() !== lowerEmail);
+    filtered.push(user);
+    writeUsersDb(filtered);
+    res.json({ success: true, users: filtered });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/users/sync', (req, res) => {
+  try {
+    const { users } = req.body;
+    if (Array.isArray(users)) {
+      const currentList = readUsersDb();
+      // Merge unique entries by email
+      const mergedMap = new Map();
+      currentList.forEach(u => mergedMap.set(u.email.toLowerCase().trim(), u));
+      users.forEach(u => {
+        if (u && u.email) {
+          mergedMap.set(u.email.toLowerCase().trim(), u);
+        }
+      });
+      const merged = Array.from(mergedMap.values());
+      writeUsersDb(merged);
+      return res.json({ success: true, users: merged });
+    }
+    res.status(400).json({ error: 'Payload must be an array of users' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Moderation API routes
+app.get('/api/moderation/status', (req, res) => {
+  res.json(readModDb());
+});
+
+app.post('/api/moderation/update', (req, res) => {
+  try {
+    const current = readModDb();
+    const { verifiedUsers, bannedUsers, mutedUsers } = req.body;
+    const updated = {
+      verifiedUsers: verifiedUsers !== undefined ? verifiedUsers : current.verifiedUsers,
+      bannedUsers: bannedUsers !== undefined ? bannedUsers : current.bannedUsers,
+      mutedUsers: mutedUsers !== undefined ? mutedUsers : current.mutedUsers,
+    };
+    writeModDb(updated);
+    res.json({ success: true, ...updated });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Partner Program API routes
+app.get('/api/partner/list', (req, res) => {
+  res.json({ members: readPartnersDb() });
+});
+
+app.post('/api/partner/join', (req, res) => {
+  try {
+    const { name, username, email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Missing email address' });
+    }
+    const currentList = readPartnersDb();
+    const newMember = {
+      name: name || 'Anonymous Guest',
+      username: username || 'guest_user',
+      email: email,
+      timestamp: new Date().toISOString()
+    };
+    // Exclude duplicates
+    const filtered = currentList.filter(m => m.email.toLowerCase().trim() !== email.toLowerCase().trim());
+    filtered.push(newMember);
+    writePartnersDb(filtered);
+    res.json({ success: true, members: filtered });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// --- GLOBAL PERSISTENT STADIUM LIVE CHAT STORAGE ---
+interface StadiumChatMessage {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+  flag: string;
+  text: string;
+  time: string;
+  isAdmin?: boolean;
+  replyTo?: {
+    id: string;
+    text: string;
+    username: string;
+  };
+}
+
+let stadiumChatMessages: Record<string, StadiumChatMessage[]> = {};
+const STADIUM_CHAT_FILE = path.join(process.cwd(), 'stadium_chat.json');
+
+// Bootstrap stadium chat on startup
+try {
+  if (fs.existsSync(STADIUM_CHAT_FILE)) {
+    const rawData = fs.readFileSync(STADIUM_CHAT_FILE, 'utf-8');
+    stadiumChatMessages = JSON.parse(rawData);
+  }
+} catch (e) {
+  console.error('Error bootstrapping stadium live chat database:', e);
+}
+
+// Helper to persist stadium live chat safely
+void function loadDefaultChats() {
+  // Ensure we have arrays ready for at least the baseline channels
+  const defaults = ["fb_somoy_tv", "fb_jamuna_tv", "fb_tsports", "fb_gtv", "fb_channel24", "fb_btv_national", "fb_btv_world", "fb_sangshad_tv"];
+  defaults.forEach(chan => {
+    if (!stadiumChatMessages[chan]) {
+      stadiumChatMessages[chan] = [];
+    }
+  });
+}();
+
+function saveStadiumChats() {
+  try {
+    fs.writeFileSync(STADIUM_CHAT_FILE, JSON.stringify(stadiumChatMessages, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error persisting stadium chat db to disk:', e);
+  }
+}
+
+// Get messages for a channel
+app.get('/api/stadium-chat/:channelId', (req, res) => {
+  const { channelId } = req.params;
+  const msgs = stadiumChatMessages[channelId] || [];
+  return res.json(msgs);
+});
+
+// Post a message in stadium live chat
+app.post('/api/stadium-chat/:channelId', (req, res) => {
+  const { channelId } = req.params;
+  const { id, name, username, avatar, flag, text, time, isAdmin, replyTo } = req.body;
+
+  if (!username || !text) {
+    return res.status(400).json({ error: 'Username and message text are required.' });
+  }
+
+  const cleanMessage: StadiumChatMessage = {
+    id: id || `msg_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+    name: name || username,
+    username,
+    avatar: avatar || '',
+    flag: flag || '🇧🇩',
+    text: text.trim(),
+    time: time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    isAdmin: !!isAdmin,
+    replyTo
+  };
+
+  if (!stadiumChatMessages[channelId]) {
+    stadiumChatMessages[channelId] = [];
+  }
+
+  stadiumChatMessages[channelId].push(cleanMessage);
+
+  // Maintain sliding window of last 60 messages to optimize memory/payload footprint
+  if (stadiumChatMessages[channelId].length > 60) {
+    stadiumChatMessages[channelId].shift();
+  }
+
+  saveStadiumChats();
+  return res.json({ success: true, messages: stadiumChatMessages[channelId] });
+});
+
+// Delete a message by ID from stadium chat (Moderation action)
+app.post('/api/stadium-chat/:channelId/delete', (req, res) => {
+  const { channelId } = req.params;
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Missing message ID' });
+  }
+
+  if (stadiumChatMessages[channelId]) {
+    stadiumChatMessages[channelId] = stadiumChatMessages[channelId].filter(m => m.id !== id);
+    saveStadiumChats();
+  }
+  return res.json({ success: true, messages: stadiumChatMessages[channelId] || [] });
+});
+
+// Ban/Mute support: Delete all messages by user (Extreme moderation action)
+app.post('/api/stadium-chat/:channelId/delete-user', (req, res) => {
+  const { channelId } = req.params;
+  const { username } = req.body;
+  if (!username) {
+    return res.status(400).json({ error: 'Missing username parameter' });
+  }
+
+  if (stadiumChatMessages[channelId]) {
+    stadiumChatMessages[channelId] = stadiumChatMessages[channelId].filter(m => m.username !== username);
+    saveStadiumChats();
+  }
+  return res.json({ success: true, messages: stadiumChatMessages[channelId] || [] });
+});
+
 
 // Vite server startup config
 async function startServer() {

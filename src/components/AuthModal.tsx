@@ -128,6 +128,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
       const db = getUserDatabase();
       db.push(user);
       localStorage.setItem('bongo_stream_users_db', JSON.stringify(db));
+      
+      // Server-side real-time synchronization
+      fetch('/api/users/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user })
+      }).catch(err => console.error('Error syncing signup status:', err));
     } catch (e) {
       console.error("Failed to write register user credentials to database", e);
     }

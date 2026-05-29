@@ -41,7 +41,6 @@ export default function ChannelCard({
   workingReport = 'untested'
 }: ChannelCardProps) {
   const [hasError, setHasError] = useState(false);
-  const firstLetter = channel.name.charAt(0);
   const backgroundGradient = getThemeGradient(channel.name);
 
   // Generate safe proxied logo url using global weserv.nl proxy bypass
@@ -54,126 +53,75 @@ export default function ChannelCard({
 
   const proxiedLogo = getSafeLogoUrl(channel.logo);
 
-  // Determine the status dot color and label
-  let statusColor = 'bg-slate-500';
-  let statusText = 'পরীক্ষা করা হয়নি';
-  if (workingReport === 'working') {
-    statusColor = 'bg-emerald-500 ring-2 ring-emerald-500/30';
-    statusText = 'সক্রিয় অনলাইন';
-  } else if (workingReport === 'broken') {
-    statusColor = 'bg-rose-500 ring-2 ring-rose-500/30';
-    statusText = 'ত্রুটিযুক্ত / অফলাইন';
-  }
-
   return (
     <div
       id={`channel-card-${channel.id}`}
       onClick={() => onSelect(channel)}
-      className="flex flex-col items-center justify-center p-2 group cursor-pointer transition-all duration-300 relative select-none"
+      className={`relative w-full aspect-[4/5] flex flex-col items-center justify-between p-2.5 rounded-[20px] bg-black border cursor-pointer select-none transition-all duration-300 hover:scale-105 active:scale-95
+        ${isSelected 
+          ? 'border-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.5)] z-10' 
+          : 'border-pink-500/80 hover:border-pink-400'
+        }
+      `}
     >
-      {/* Circle Card Container */}
-      <div 
-        className={`w-28 h-28 rounded-full flex items-center justify-center relative transition-all duration-300 border-2 shadow-lg
-          ${isSelected 
-            ? 'bg-sky-950/40 border-sky-450 shadow-sky-500/25 scale-105' 
-            : 'bg-slate-900 border-slate-800 hover:border-sky-500 hover:scale-105'
+      {/* Favorite Icon (Top Right Corner Badge) */}
+      <button
+        id={`btn-fav-toggle-${channel.id}`}
+        onClick={(e) => onToggleFavorite(channel.id, e)}
+        className={`absolute top-1.5 right-1.5 p-1 rounded-full border transition-all duration-200 z-20 hover:scale-110 active:scale-95 cursor-pointer
+          ${isFavorite 
+            ? 'bg-pink-500/15 border-pink-500 text-pink-500' 
+            : 'bg-black/80 border-white/10 text-slate-400 hover:text-pink-400 hover:border-pink-500/50'
           }
         `}
+        title={isFavorite ? "পছন্দের তালিকা থেকে বাদ দিন" : "পছন্দের তালিকায় যুক্ত করুন"}
       >
-        {/* Dynamic Equalizer Overlay when playing */}
-        {isSelected && (
-          <div className="absolute inset-x-0 bottom-1.5 flex items-end justify-center gap-0.5 h-4.5 bg-slate-950/90 rounded-full py-0.5 max-w-[55px] mx-auto border border-sky-500/30 z-10 animate-pulse">
-            <span className="w-0.5 bg-sky-400 rounded-full animate-bounce h-2.5" style={{ animationDelay: '0ms' }} />
-            <span className="w-0.5 bg-sky-400 rounded-full animate-bounce h-1.5" style={{ animationDelay: '150ms' }} />
-            <span className="w-0.5 bg-sky-400 rounded-full animate-bounce h-3" style={{ animationDelay: '300ms' }} />
-          </div>
-        )}
+        <Star className={`w-3 h-3 ${isFavorite ? 'fill-pink-500' : ''}`} />
+      </button>
 
-        {/* Favorite Icon (Top Right Corner Badge) */}
-        <button
-          id={`btn-fav-toggle-${channel.id}`}
-          onClick={(e) => onToggleFavorite(channel.id, e)}
-          className={`absolute -top-1 -right-1 p-1.5 rounded-full border transition-all duration-250 z-20 hover:scale-110 active:scale-95 shadow-md cursor-pointer
-            ${isFavorite 
-              ? 'bg-slate-900 border-sky-500 text-sky-455' 
-              : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-sky-450 hover:border-slate-700'
-            }
-          `}
-          title={isFavorite ? "পছন্দের তালিকা থেকে বাদ দিন" : "পছন্দের তালিকায় যুক্ত করুন"}
-        >
-          <Star className={`w-3.5 h-3.5 ${isFavorite ? 'fill-sky-400' : ''}`} />
-        </button>
+      {/* Verified Online Bullet (Top Left) */}
+      {workingReport === 'working' && (
+        <span className="absolute top-2 left-2 flex h-2 w-2 z-25">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-duration-1000"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+      )}
 
-        {/* Real-time LIVE Status Badge with pulsing beacon (Top Left Corner) */}
-        {(workingReport === 'working') && (
-          <div 
-            id={`badge-live-marker-${channel.id}`}
-            className="absolute -top-1 -left-1 px-1.5 py-0.5 bg-rose-600 border border-slate-950 rounded-md text-[7px] font-extrabold text-white uppercase tracking-wider flex items-center gap-1 shadow-lg animate-pulse z-20 select-none"
-            title="লাইভ সম্প্রচার চলছে (LIVE)"
-          >
-            <span className="relative flex h-1 w-1 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-85"></span>
-              <span className="relative inline-flex rounded-full h-1 w-1 bg-white"></span>
-            </span>
-            <span>LIVE</span>
-          </div>
-        )}
-
-        {/* Channel Logo Image */}
-        <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-slate-950 p-2 border border-slate-800/80 relative">
-          
-          {/* Subtle Translucent Watermark Overlay if Live */}
-          {(workingReport === 'working') && (
-            <div className="absolute inset-0 bg-rose-600/[0.04] pointer-events-none flex items-center justify-center z-10 transition-all">
-              <span className="absolute bottom-1 bg-rose-950/70 text-[6px] font-black text-rose-450 border border-rose-500/20 px-1 py-0.2 rounded tracking-widest font-sans scale-90 flex items-center gap-0.5 select-none uppercase">
-                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-                Live SD
-              </span>
-            </div>
-          )}
-
+      {/* Premium Circular White Logo Container */}
+      <div className="flex-1 flex items-center justify-center w-full min-h-0 pt-1">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-full p-2.5 flex items-center justify-center overflow-hidden shadow-inner border border-white/5 relative shrink-0">
           {proxiedLogo && !hasError ? (
             <img
               src={proxiedLogo}
               alt={channel.name}
               className="w-full h-full object-contain rounded-full transition-transform duration-300 group-hover:scale-110"
               onError={() => {
-                // Secondary check: if proxied version failed, let's try direct as a secondary fallback
                 setHasError(true);
               }}
               referrerPolicy="no-referrer"
             />
           ) : (
             /* Fallback View - Elegant Gradient circle with letters */
-            <div className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-tr ${backgroundGradient} text-white font-extrabold select-none p-2 text-center rounded-full transition-all duration-300 shadow-inner`}>
-              <Tv className="w-6 h-6 text-white/95 mb-0.5 drop-shadow-md" />
-              <span className="text-[10px] tracking-wider text-white truncate max-w-[70px] uppercase font-sans font-bold drop-shadow-sm">
-                {channel.name}
-              </span>
+            <div className={`w-full h-full rounded-full bg-gradient-to-tr ${backgroundGradient} text-white font-extrabold flex items-center justify-center text-xs font-sans uppercase`}>
+              {channel.name.slice(0, 2)}
             </div>
           )}
         </div>
-
-        {/* Streaming active status indicator */}
-        <span 
-          className={`absolute -bottom-0.5 right-1.5 h-4 w-4 rounded-full border-2 border-slate-950 flex items-center justify-center shadow-md transition-colors duration-350
-            ${isSelected ? 'bg-sky-400 ring-2 ring-sky-500/40 animate-pulse' : statusColor}
-          `}
-          title={isSelected ? "বর্তমানে চালুকৃত" : statusText}
-        />
       </div>
 
-      {/* Simplified, Clean Name underneath the Circle */}
-      <h4 
-        className={`text-xs mt-2 text-center font-medium max-w-[110px] truncate leading-tight transition-colors duration-200 font-sans
-          ${isSelected 
-            ? 'text-sky-400 font-semibold' 
-            : 'text-slate-300 group-hover:text-slate-100'
-          }
-        `}
-      >
-        {channel.name}
-      </h4>
+      {/* Capitalized/Bold clean channel name underneath the Circle */}
+      <div className="w-full text-center mt-1 pb-0.5">
+        <span 
+          className={`text-[9px] sm:text-[11px] md:text-xs font-bold block truncate leading-tight uppercase font-sans tracking-wide px-0.5
+            ${isSelected 
+              ? 'text-pink-400' 
+              : 'text-slate-100 group-hover:text-white'
+            }
+          `}
+        >
+          {channel.name}
+        </span>
+      </div>
     </div>
   );
 }
